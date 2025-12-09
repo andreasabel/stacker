@@ -61,8 +61,10 @@ processLTSSnapshots ltsDir = do
             [(minor, "")] -> do
               ghc <- extractGHCVersion (dir </> fname)
               return (LTSVersion major minor, ghc)
-            _ -> error $ "Invalid minor version in " ++ fname
-      | otherwise = error $ "Unexpected file " ++ fname
+            _ -> error $ "Invalid minor version format in " ++ fname ++ 
+                        ": expected integer, got '" ++ minorStr ++ "'"
+      | otherwise = error $ "Unexpected file in LTS directory: " ++ fname ++ 
+                           " (expected .yaml extension)"
 
 -- | Process nightly snapshots (structure: nightly/year/month/day.yaml)
 processNightlySnapshots :: FilePath -> IO [(NightlyVersion, GHCVersion)]
@@ -86,7 +88,8 @@ processNightlySnapshots nightlyDir = do
           let dateStr = year ++ "-" ++ month ++ "-" ++ day
           ghc <- extractGHCVersion (dir </> fname)
           return (NightlyVersion $ T.pack dateStr, ghc)
-      | otherwise = error $ "Unexpected file " ++ fname
+      | otherwise = error $ "Unexpected file in nightly directory: " ++ fname ++ 
+                           " (expected .yaml extension)"
 
 -- | Extract GHC version from a snapshot YAML file
 extractGHCVersion :: FilePath -> IO GHCVersion

@@ -7,7 +7,7 @@ module StackYaml
   ) where
 
 import Control.Monad (filterM)
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, isSuffixOf)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -24,7 +24,7 @@ findStackYamlFiles = do
   where
     isStackYaml name =
       let fname = takeFileName name
-      in T.isPrefixOf "stack" (T.pack fname) && T.isSuffixOf ".yaml" (T.pack fname)
+      in "stack" `isPrefixOf` fname && ".yaml" `isSuffixOf` fname
 
 -- | Parse a stack.yaml file to extract the snapshot field
 parseStackYaml :: FilePath -> IO (Maybe (Text, Bool, (Int, Int)))
@@ -50,7 +50,7 @@ parseStackYaml file = do
       | field `isPrefixOf` s =
           let afterField = drop (length field) s
               trimmed = dropWhile (\c -> c `elem` (" \t" :: String)) afterField
-              value = takeWhile (\c -> c /= '\n' && c /= '\r') trimmed
+              value = takeWhile (`notElem` ("\n\r" :: String)) trimmed
               valueStart = pos + (length orig - length s) + length field + (length afterField - length trimmed)
               valueEnd = valueStart + length value
           in if null value
