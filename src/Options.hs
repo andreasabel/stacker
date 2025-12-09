@@ -5,6 +5,7 @@ module Options
   , Options(..)
   ) where
 
+import Data.Char (toLower)
 import Options.Applicative
 import Types
 
@@ -54,8 +55,15 @@ repoParser = SetRepo <$> argument str (metavar "PATH")
 
 -- | Color option parser
 colorOption :: Parser ColorWhen
-colorOption = option auto
+colorOption = option readColorWhen
   ( long "color"
  <> metavar "WHEN"
  <> value Auto
  <> help "Use colored output (always, never, auto)" )
+  where
+    readColorWhen = maybeReader $ \s ->
+      case map toLower s of
+        "always" -> Just Always
+        "never" -> Just Never
+        "auto" -> Just Auto
+        _ -> Nothing
