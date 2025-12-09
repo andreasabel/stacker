@@ -7,6 +7,7 @@ module StackYaml
   ) where
 
 import Control.Monad (filterM)
+import Data.List (isPrefixOf)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -29,10 +30,8 @@ findStackYamlFiles = do
 parseStackYaml :: FilePath -> IO (Maybe (Text, Bool, (Int, Int)))
 parseStackYaml file = do
   content <- TIO.readFile file
-  let contentStr = T.unpack content
-  return $ findSnapshot contentStr 0
+  return $ findSnapshot (T.unpack content) 0
   where
-    findSnapshot [] _ = Nothing
     findSnapshot s pos =
       case findField "snapshot:" s pos of
         Just (value, start, end) -> Just (T.pack value, False, (start, end))
@@ -43,20 +42,21 @@ parseStackYaml file = do
     
     findField :: String -> String -> Int -> Maybe (String, Int, Int)
     findField field s pos =
-      case dropWhile (/= field) (tails s) of
-        [] -> Nothing
-        (match:_) ->
-          let afterField = drop (length field) match
+      findFieldHelper field s pos s
+    
+    findFieldHelper :: String -> String -> Int -> String -> Maybe (String, Int, Int)
+    findFieldHelper field orig pos [] = Nothing
+    findFieldHelper field orig pos s@(c:cs)
+      | field `isPrefixOf` s =
+          let afterField = drop (length field) s
               trimmed = dropWhile (\c -> c `elem` (" \t" :: String)) afterField
               value = takeWhile (\c -> c /= '\n' && c /= '\r') trimmed
-              valueStart = pos + (length s - length match) + length field + (length afterField - length trimmed)
+              valueStart = pos + (length orig - length s) + length field + (length afterField - length trimmed)
               valueEnd = valueStart + length value
           in if null value
                then Nothing
                else Just (value, valueStart, valueEnd)
-    
-    tails [] = []
-    tails s@(_:xs) = s : tails xs
+      | otherwise = findFieldHelper field orig pos cs
 
 -- | Apply an action to update a stack.yaml file
 applyAction :: Action -> IO ()

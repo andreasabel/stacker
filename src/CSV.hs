@@ -29,50 +29,64 @@ generateCSVs repoPath = do
   createDirectoryIfMissing True stateDir
   
   -- Process LTS snapshots
-  ltsFiles <- listDirectory (repoPath </> "lts")
-  ltsMap <- processSnapshots (repoPath </> "lts") ltsFiles parseLTS
+  ltsMap <- processLTSSnapshots (repoPath </> "lts")
   writeLTSCSV (stateDir </> "lts.csv") ltsMap
   
   -- Process nightly snapshots
-  nightlyFiles <- listDirectory (repoPath </> "nightly")
-  nightlyMap <- processSnapshots (repoPath </> "nightly") nightlyFiles parseNightly
+  nightlyMap <- processNightlySnapshots (repoPath </> "nightly")
   writeNightlyCSV (stateDir </> "nightly.csv") nightlyMap
   
   -- Generate GHC version map
   let ghcMap = generateGHCMap ltsMap nightlyMap
   writeGHCCSV (stateDir </> "ghc.csv") ghcMap
 
--- | Parse LTS version from filename
-parseLTS :: FilePath -> Maybe LTSVersion
-parseLTS name = 
-  case splitOn "." name of
-    [majorStr, minorStr] -> 
-      case (reads majorStr, reads minorStr) of
-        ([(major, "")], [(minor, "")]) -> Just $ LTSVersion major minor
-        _ -> Nothing
-    _ -> Nothing
-
--- | Parse nightly version from filename
-parseNightly :: FilePath -> Maybe NightlyVersion
-parseNightly name = Just $ NightlyVersion $ T.pack name
-
--- | Process snapshot files
-processSnapshots :: FilePath -> [FilePath] -> (FilePath -> Maybe a) -> IO [(a, GHCVersion)]
-processSnapshots dir files parser = do
-  results <- mapM processFile files
+-- | Process LTS snapshots (structure: lts/major/minor.yaml)
+processLTSSnapshots :: FilePath -> IO [(LTSVersion, GHCVersion)]
+processLTSSnapshots ltsDir = do
+  majorDirs <- listDirectory ltsDir
+  results <- mapM (processMajor ltsDir) majorDirs
   return $ concat results
   where
-    processFile fname = do
-      let ext = takeExtension fname
-      if ext == ".yaml"
-        then do
-          let baseName = take (length fname - 5) fname  -- Remove .yaml
-          case parser baseName of
-            Just version -> do
-              ghcVer <- extractGHCVersion (dir </> fname)
-              return [(version, ghcVer)]
-            Nothing -> return []
-        else return []
+    processMajor dir majorStr = do
+      case reads majorStr of
+        [(major, "")] -> do
+          let majorPath = dir </> majorStr
+          minorFiles <- listDirectory majorPath
+          mapM (processMinor majorPath major) minorFiles
+        _ -> return []
+    processMinor dir major fname
+      | takeExtension fname == ".yaml" = do
+          let minorStr = take (length fname - 5) fname
+          case reads minorStr of
+            [(minor, "")] -> do
+              ghc <- extractGHCVersion (dir </> fname)
+              return (LTSVersion major minor, ghc)
+            _ -> error $ "Invalid minor version in " ++ fname
+      | otherwise = error $ "Unexpected file " ++ fname
+
+-- | Process nightly snapshots (structure: nightly/year/month/day.yaml)
+processNightlySnapshots :: FilePath -> IO [(NightlyVersion, GHCVersion)]
+processNightlySnapshots nightlyDir = do
+  yearDirs <- listDirectory nightlyDir
+  results <- mapM (processYear nightlyDir) yearDirs
+  return $ concat results
+  where
+    processYear dir yearStr = do
+      let yearPath = dir </> yearStr
+      monthDirs <- listDirectory yearPath
+      months <- mapM (processMonth yearPath yearStr) monthDirs
+      return $ concat months
+    processMonth dir year monthStr = do
+      let monthPath = dir </> monthStr
+      dayFiles <- listDirectory monthPath
+      mapM (processDay monthPath year monthStr) dayFiles
+    processDay dir year month fname
+      | takeExtension fname == ".yaml" = do
+          let day = take (length fname - 5) fname
+          let dateStr = year ++ "-" ++ month ++ "-" ++ day
+          ghc <- extractGHCVersion (dir </> fname)
+          return (NightlyVersion $ T.pack dateStr, ghc)
+      | otherwise = error $ "Unexpected file " ++ fname
 
 -- | Extract GHC version from a snapshot YAML file
 extractGHCVersion :: FilePath -> IO GHCVersion
@@ -81,10 +95,19 @@ extractGHCVersion file = do
   case result of
     Left err -> error $ "Failed to parse " ++ file ++ ": " ++ show err
     Right (Aeson.Object obj) ->
-      case Yaml.parseMaybe (.: "compiler") obj of
-        Just (Aeson.String compiler) -> 
-          return $ GHCVersion $ T.drop 4 compiler  -- Remove "ghc-" prefix
-        _ -> error $ "No compiler field in " ++ file
+      -- Try new format first (nested under resolver)
+      case Yaml.parseMaybe (.: "resolver") obj of
+        Just (Aeson.Object resolverObj) ->
+          case Yaml.parseMaybe (.: "compiler") resolverObj of
+            Just (Aeson.String compiler) -> 
+              return $ GHCVersion $ T.drop 4 compiler  -- Remove "ghc-" prefix
+            _ -> error $ "No compiler field in resolver in " ++ file
+        _ ->
+          -- Try old format (compiler at top level)
+          case Yaml.parseMaybe (.: "compiler") obj of
+            Just (Aeson.String compiler) -> 
+              return $ GHCVersion $ T.drop 4 compiler  -- Remove "ghc-" prefix
+            _ -> error $ "No compiler field in " ++ file
     _ -> error $ "Invalid YAML in " ++ file
 
 -- | Write LTS CSV file

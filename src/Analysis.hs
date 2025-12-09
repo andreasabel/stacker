@@ -5,9 +5,10 @@ module Analysis
   , analyzeAllStackYamls
   ) where
 
-import Data.List.Split (splitOn)
+import Data.List (maximumBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Types (Action(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
@@ -44,23 +45,50 @@ determineNewSnapshot db oldSnap
 determineLTSBump :: SnapshotDB -> Text -> Maybe Text
 determineLTSBump db oldSnap = do
   oldVersion <- parseLTSSnapshot oldSnap
-  oldGHC <- Map.lookup oldVersion (dbLTS db)
-  newSnapshot <- Map.lookup oldGHC (dbGHC db)
-  let newSnap = formatSnapshot newSnapshot
-  if newSnap == oldSnap
-    then Nothing  -- Already up to date
-    else Just newSnap
+  -- Find the latest LTS with the same major version
+  let sameMajor = filter (\(LTSVersion maj _, _) -> maj == ltsMajor oldVersion) $ Map.toList (dbLTS db)
+  if null sameMajor
+    then Nothing
+    else do
+      let (latestVersion, _) = maximumBy (comparing fst) sameMajor
+      let newSnap = formatSnapshot (LTS latestVersion)
+      if newSnap == oldSnap
+        then Nothing  -- Already up to date
+        else Just newSnap
 
 -- | Determine bump for nightly snapshot
 determineNightlyBump :: SnapshotDB -> Text -> Maybe Text
 determineNightlyBump db oldSnap = do
   oldVersion <- parseNightlySnapshot oldSnap
   oldGHC <- Map.lookup oldVersion (dbNightly db)
-  newSnapshot <- Map.lookup oldGHC (dbGHC db)
-  let newSnap = formatSnapshot newSnapshot
-  if newSnap == oldSnap
-    then Nothing  -- Already up to date
-    else Just newSnap
+  -- Get GHC major version (e.g., "9.6" from "9.6.1")
+  let ghcMajor = getGHCMajor oldGHC
+  -- Find if there's an LTS for this GHC major version
+  let ltsForGHC = filter (\(_, ghc) -> getGHCMajor ghc == ghcMajor) $ Map.toList (dbLTS db)
+  if not (null ltsForGHC)
+    then do
+      -- Bump to latest LTS for this GHC major
+      let (latestLTS, _) = maximumBy (comparing fst) ltsForGHC
+      return $ formatSnapshot (LTS latestLTS)
+    else do
+      -- Bump to latest nightly for this GHC major
+      let nightliesForGHC = filter (\(_, ghc) -> getGHCMajor ghc == ghcMajor) $ Map.toList (dbNightly db)
+      if null nightliesForGHC
+        then Nothing
+        else do
+          let (latestNightly, _) = maximumBy (comparing fst) nightliesForGHC
+          let newSnap = formatSnapshot (Nightly latestNightly)
+          if newSnap == oldSnap
+            then Nothing
+            else Just newSnap
+
+-- | Get GHC major version from full version (e.g., "9.6" from "9.6.1")
+getGHCMajor :: GHCVersion -> Text
+getGHCMajor (GHCVersion ver) =
+  let parts = T.splitOn "." ver
+  in case parts of
+    (maj:min:_) -> maj <> "." <> min
+    _ -> ver
 
 -- | Parse LTS snapshot string
 parseLTSSnapshot :: Text -> Maybe LTSVersion
