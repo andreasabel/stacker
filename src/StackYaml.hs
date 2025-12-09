@@ -1,0 +1,77 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+module StackYaml
+  ( findStackYamlFiles
+  , parseStackYaml
+  , applyAction
+  ) where
+
+import Control.Monad (filterM)
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import System.Directory (listDirectory, doesFileExist)
+import System.FilePath (takeFileName)
+import Types (Action(..))
+
+-- | Find all stack*.yaml files in the current directory
+findStackYamlFiles :: IO [FilePath]
+findStackYamlFiles = do
+  files <- listDirectory "."
+  let candidates = filter isStackYaml files
+  filterM doesFileExist candidates
+  where
+    isStackYaml name =
+      let fname = takeFileName name
+      in T.isPrefixOf "stack" (T.pack fname) && T.isSuffixOf ".yaml" (T.pack fname)
+
+-- | Parse a stack.yaml file to extract the snapshot field
+parseStackYaml :: FilePath -> IO (Maybe (Text, Bool, (Int, Int)))
+parseStackYaml file = do
+  content <- TIO.readFile file
+  let contentStr = T.unpack content
+  return $ findSnapshot contentStr 0
+  where
+    findSnapshot [] _ = Nothing
+    findSnapshot s pos =
+      case findField "snapshot:" s pos of
+        Just (value, start, end) -> Just (T.pack value, False, (start, end))
+        Nothing ->
+          case findField "resolver:" s pos of
+            Just (value, start, end) -> Just (T.pack value, True, (start, end))
+            Nothing -> Nothing
+    
+    findField :: String -> String -> Int -> Maybe (String, Int, Int)
+    findField field s pos =
+      case dropWhile (/= field) (tails s) of
+        [] -> Nothing
+        (match:_) ->
+          let afterField = drop (length field) match
+              trimmed = dropWhile (\c -> c `elem` (" \t" :: String)) afterField
+              value = takeWhile (\c -> c /= '\n' && c /= '\r') trimmed
+              valueStart = pos + (length s - length match) + length field + (length afterField - length trimmed)
+              valueEnd = valueStart + length value
+          in if null value
+               then Nothing
+               else Just (value, valueStart, valueEnd)
+    
+    tails [] = []
+    tails s@(_:xs) = s : tails xs
+
+-- | Apply an action to update a stack.yaml file
+applyAction :: Action -> IO ()
+applyAction action = do
+  case actionNewSnapshot action of
+    Nothing -> return ()  -- No update needed
+    Just newSnap -> do
+      content <- TIO.readFile (actionFile action)
+      let (before, after) = splitAtSpan (actionSpan action) content
+      let updated = before <> newSnap <> after
+      TIO.writeFile (actionFile action) updated
+
+-- | Split text at a character span
+splitAtSpan :: (Int, Int) -> Text -> (Text, Text)
+splitAtSpan (start, end) text =
+  let before = T.take start text
+      after = T.drop end text
+  in (before, after)
