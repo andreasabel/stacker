@@ -24,6 +24,7 @@ import qualified Data.Aeson as Aeson
 import Text.Printf (printf)
 import Types (LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..), SnapshotDB(..))
 import XDG (getStateDir)
+import System.IO (stderr)
 
 -- Helper functions for parsing
 parseGHCVersionText :: Text -> Maybe GHCVersion
@@ -59,17 +60,24 @@ generateCSVs repoPath = do
   stateDir <- getStateDir
   createDirectoryIfMissing True stateDir
 
+  TIO.hPutStrLn stderr $ "Processing snapshot database.  This might take a couple of minutes..."
+
   -- Process LTS snapshots
+  TIO.hPutStrLn stderr $ "Processing LTSs..."
   ltsMap <- processLTSSnapshots (repoPath </> "lts")
   writeLTSCSV (stateDir </> "lts.csv") ltsMap
 
   -- Process nightly snapshots
+  TIO.hPutStrLn stderr $ "Processing nightlys..."
   nightlyMap <- processNightlySnapshots (repoPath </> "nightly")
   writeNightlyCSV (stateDir </> "nightly.csv") nightlyMap
 
   -- Generate GHC version map
+  TIO.hPutStrLn stderr $ "Computing latest snapshot per GHC version..."
   let ghcMap = generateGHCMap ltsMap nightlyMap
   writeGHCCSV (stateDir </> "ghc.csv") ghcMap
+
+  TIO.hPutStrLn stderr $ "Done processing snapshot database."
 
 -- | Process LTS snapshots (structure: lts/major/minor.yaml)
 processLTSSnapshots :: FilePath -> IO [(LTSVersion, GHCVersion)]
