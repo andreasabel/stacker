@@ -1,0 +1,10 @@
+# This tests bumping some old nightly to lts-22.44
+
+# Andreas Abel, 2025-12-10
+
+resolver: nightly-2023-08-04
+
+extra-deps:
+- kailash-9.1.1
+- everest-0.0.0
+# - other-1.2.3

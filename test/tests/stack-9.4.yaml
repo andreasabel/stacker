@@ -1,0 +1,15 @@
+# This tests bumping of lts-21.20 to lts-21.25
+# Andreas Abel, 2025-12-10
+
+snapshot: lts-21.20
+
+extra-deps:
+- extra-1.18
+
+flag:
+  Agda:
+    debug: True
+
+extra-deps: [foo-9, bar-10]
+
+# This is already the end.

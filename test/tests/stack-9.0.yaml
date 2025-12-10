@@ -1,0 +1,9 @@
+snapshot: nightly-2021-12-04
+compiler: 9.0.2
+compiler-check: match-exact
+
+# Well, then...
+
+extra-deps: [base-4.19]
+# Doesn't make sense, I know...
+
