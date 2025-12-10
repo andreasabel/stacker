@@ -7,7 +7,7 @@ module StackYaml
   ) where
 
 import Control.Monad (filterM)
-import Data.List (isPrefixOf, isSuffixOf)
+import Data.List (isPrefixOf, isSuffixOf, sort)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -20,7 +20,8 @@ findStackYamlFiles :: IO [FilePath]
 findStackYamlFiles = do
   files <- listDirectory "."
   let candidates = filter isStackYaml files
-  filterM doesFileExist candidates
+  validFiles <- filterM doesFileExist candidates
+  return $ sort validFiles  -- Sort the result
   where
     isStackYaml name =
       let fname = takeFileName name

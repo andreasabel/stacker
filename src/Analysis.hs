@@ -12,6 +12,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Text.Printf (printf)
 import Types (Action(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
 import StackYaml (parseStackYaml, findStackYamlFiles)
 
@@ -62,7 +63,7 @@ determineNightlyBump :: SnapshotDB -> Text -> Maybe Text
 determineNightlyBump db oldSnap = do
   oldVersion <- parseNightlySnapshot oldSnap
   oldGHC <- Map.lookup oldVersion (dbNightly db)
-  -- Get GHC major version (e.g., "9.6" from "9.6.1")
+  -- Get GHC major version (e.g., (9,6) from GHCVersion 9 6 1)
   let ghcMajor = getGHCMajor oldGHC
   -- Find if there's an LTS for this GHC major version
   let ltsForGHC = filter (\(_, ghc) -> getGHCMajor ghc == ghcMajor) $ Map.toList (dbLTS db)
@@ -83,13 +84,9 @@ determineNightlyBump db oldSnap = do
             then Nothing
             else Just newSnap
 
--- | Get GHC major version from full version (e.g., "9.6" from "9.6.1")
-getGHCMajor :: GHCVersion -> Text
-getGHCMajor (GHCVersion ver) =
-  let parts = T.splitOn "." ver
-  in case parts of
-    (maj:min:_) -> maj <> "." <> min
-    _ -> ver
+-- | Get GHC major version from full version (e.g., (9,6) from GHCVersion 9 6 1)
+getGHCMajor :: GHCVersion -> (Int, Int)
+getGHCMajor (GHCVersion maj1 maj2 _) = (maj1, maj2)
 
 -- | Parse LTS snapshot string
 parseLTSSnapshot :: Text -> Maybe LTSVersion
@@ -104,11 +101,16 @@ parseLTSSnapshot snap =
 -- | Parse nightly snapshot string
 parseNightlySnapshot :: Text -> Maybe NightlyVersion
 parseNightlySnapshot snap =
-  Just $ NightlyVersion $ T.drop 8 snap  -- Remove "nightly-"
+  case T.splitOn "-" (T.drop 8 snap) of  -- Remove "nightly-"
+    [yearStr, monthStr, dayStr] ->
+      case (reads $ T.unpack yearStr, reads $ T.unpack monthStr, reads $ T.unpack dayStr) of
+        ([(year, "")], [(month, "")], [(day, "")]) -> Just $ NightlyVersion year month day
+        _ -> Nothing
+    _ -> Nothing
 
 -- | Format a snapshot as a string
 formatSnapshot :: Snapshot -> Text
 formatSnapshot (LTS (LTSVersion maj min)) =
   "lts-" <> T.pack (show maj) <> "." <> T.pack (show min)
-formatSnapshot (Nightly (NightlyVersion date)) =
-  "nightly-" <> date
+formatSnapshot (Nightly (NightlyVersion year month day)) =
+  T.pack $ "nightly-" ++ printf "%d-%02d-%02d" year month day

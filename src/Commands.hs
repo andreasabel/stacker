@@ -5,14 +5,17 @@ module Commands
   ) where
 
 import Control.Monad (forM_, when)
+import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Console.ANSI
 import System.Directory (makeAbsolute, doesFileExist, createDirectoryIfMissing)
 import System.FilePath (takeDirectory, (</>))
+import Text.Printf (printf)
 import Types
 import Config
 import CSV
@@ -32,6 +35,7 @@ runCommand opts = do
     NumericVersion -> putStrLn appVersion
     PrintLicense -> putStrLn licenseText
     Help -> printHelp
+    Config configCmd -> runConfig configCmd  -- Handle config first!
     cmd -> runEssentialCommand useColor cmd
 
 -- | Run an essential command (requires repo setup)
@@ -50,7 +54,6 @@ runEssentialCommand useColor cmd = do
     Bump -> runBump
     Update -> runUpdate repoPath
     Info -> runInfo repoPath
-    Config configCmd -> runConfig configCmd
     _ -> return ()
 
 -- | Print version information
@@ -87,7 +90,10 @@ runDryRun useColor = do
   db <- loadSnapshotDB
   actions <- analyzeAllStackYamls db
   
-  forM_ actions $ \action -> do
+  -- Sort actions by filename
+  let sortedActions = sortBy (comparing actionFile) actions
+  
+  forM_ sortedActions $ \action -> do
     printAction useColor action
 
 -- | Print an action
@@ -97,13 +103,12 @@ printAction useColor action = do
   let oldSnap = actionOldSnapshot action
   let newSnap = actionNewSnapshot action
   
+  -- Print with proper alignment (file padded to 20 chars, oldSnap to 25 chars)
   when useColor $ setSGR [SetConsoleIntensity BoldIntensity]
-  putStr file
+  putStr $ padRight 20 file
   when useColor $ setSGR [Reset]
   
-  putStr "    "
-  putStr $ T.unpack oldSnap
-  putStr "    "
+  putStr $ padRight 25 (T.unpack oldSnap)
   
   case newSnap of
     Nothing -> do
@@ -117,6 +122,10 @@ printAction useColor action = do
       when useColor $ setSGR [Reset]
   
   putStrLn ""
+
+-- | Pad string to the right
+padRight :: Int -> String -> String
+padRight n s = take n (s ++ repeat ' ')
 
 -- | Run bump command
 runBump :: IO ()
@@ -146,15 +155,20 @@ runInfo repoPath = do
   putStrLn "snapshots:"
   
   let ghcEntries = Map.toAscList (dbGHC db)
-  forM_ ghcEntries $ \(GHCVersion ghc, snapshot) -> do
-    putStrLn $ "  " ++ T.unpack ghc ++ ": " ++ T.unpack (formatSnapshotText snapshot)
+  forM_ ghcEntries $ \(ghc, snapshot) -> do
+    putStrLn $ "  " ++ formatGHCVersionText ghc ++ ": " ++ T.unpack (formatSnapshotText snapshot)
+
+-- | Format GHC version as text
+formatGHCVersionText :: GHCVersion -> String
+formatGHCVersionText (GHCVersion maj1 maj2 minV) =
+  show maj1 ++ "." ++ show maj2 ++ "." ++ show minV
 
 -- | Format snapshot as text
 formatSnapshotText :: Snapshot -> Text
 formatSnapshotText (LTS (LTSVersion maj min)) =
   "lts-" <> T.pack (show maj) <> "." <> T.pack (show min)
-formatSnapshotText (Nightly (NightlyVersion date)) =
-  "nightly-" <> date
+formatSnapshotText (Nightly (NightlyVersion year month day)) =
+  T.pack $ "nightly-" ++ printf "%d-%02d-%02d" year month day
 
 -- | Run config command
 runConfig :: ConfigCmd -> IO ()

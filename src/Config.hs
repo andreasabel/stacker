@@ -8,7 +8,7 @@ module Config
   ) where
 
 import Data.Yaml (decodeFileEither, encodeFile, FromJSON(..), ToJSON(..), (.:?), (.=), object, withObject)
-import System.Directory (createDirectoryIfMissing, doesFileExist, makeAbsolute)
+import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FilePath (takeDirectory)
 import Types (AppConfig(..))
 import XDG (getConfigFile, getRepoDir)

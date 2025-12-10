@@ -5,7 +5,9 @@ module Types where
 
 import Data.Map.Strict (Map)
 import Data.Text (Text)
+import Data.Version (showVersion)
 import GHC.Generics (Generic)
+import qualified Paths_stack_snapshots as Paths
 
 -- | LTS version (e.g., "24.23" for lts-24.23)
 data LTSVersion = LTSVersion
@@ -14,12 +16,18 @@ data LTSVersion = LTSVersion
   } deriving (Eq, Ord, Show, Generic)
 
 -- | Nightly version (e.g., "2025-12-09" for nightly-2025-12-09)
-newtype NightlyVersion = NightlyVersion Text
-  deriving (Eq, Ord, Show, Generic)
+data NightlyVersion = NightlyVersion
+  { nightlyYear :: Int
+  , nightlyMonth :: Int
+  , nightlyDay :: Int
+  } deriving (Eq, Ord, Show, Generic)
 
 -- | GHC version (e.g., "9.10.1")
-newtype GHCVersion = GHCVersion Text
-  deriving (Eq, Ord, Show, Generic)
+data GHCVersion = GHCVersion
+  { ghcMajor1 :: Int
+  , ghcMajor2 :: Int
+  , ghcMinor :: Int
+  } deriving (Eq, Ord, Show, Generic)
 
 -- | Snapshot reference
 data Snapshot
@@ -81,7 +89,7 @@ data Options = Options
 
 -- | Application version
 appVersion :: String
-appVersion = "0.1.0.0"
+appVersion = showVersion Paths.version
 
 -- | Application name
 appName :: String

@@ -16,6 +16,7 @@ extra-doc-files:    README.md
 
 common warnings
     ghc-options: -Wall
+    default-extensions: ScopedTypeVariables
 
 executable stack-snapshots
     import:           warnings
@@ -32,6 +33,7 @@ executable stack-snapshots
         Commands
         XDG
         Types
+        Paths_stack_snapshots
     build-depends:    
         base >=4.16 && <5,
         directory >=1.3,
@@ -46,7 +48,8 @@ executable stack-snapshots
         ansi-terminal >=0.11,
         time >=1.11,
         mtl >=2.2,
-        split >=0.2
+        split >=0.2,
+        file-embed >=0.0.15
     hs-source-dirs:   src
     default-language: Haskell2010
 

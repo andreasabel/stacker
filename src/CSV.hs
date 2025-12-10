@@ -19,8 +19,37 @@ import System.FilePath ((</>), takeExtension)
 import qualified Data.Yaml as Yaml
 import Data.Yaml ((.:))
 import qualified Data.Aeson as Aeson
+import Text.Printf (printf)
 import Types (LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..), SnapshotDB(..))
 import XDG (getStateDir)
+
+-- Helper functions for parsing
+parseGHCVersionText :: Text -> Maybe GHCVersion
+parseGHCVersionText txt =
+  case T.splitOn "." txt of
+    [maj1Str, maj2Str, minStr] ->
+      case (reads $ T.unpack maj1Str, reads $ T.unpack maj2Str, reads $ T.unpack minStr) of
+        ([(maj1, "")], [(maj2, "")], [(minV, "")]) -> Just $ GHCVersion maj1 maj2 minV
+        _ -> Nothing
+    _ -> Nothing
+
+parseNightlyVersionText :: Text -> Maybe NightlyVersion
+parseNightlyVersionText txt =
+  case T.splitOn "-" txt of
+    [yearStr, monthStr, dayStr] ->
+      case (reads $ T.unpack yearStr, reads $ T.unpack monthStr, reads $ T.unpack dayStr) of
+        ([(year, "")], [(month, "")], [(day, "")]) -> Just $ NightlyVersion year month day
+        _ -> Nothing
+    _ -> Nothing
+
+-- Helper functions for formatting
+formatGHCVersion :: GHCVersion -> Text
+formatGHCVersion (GHCVersion maj1 maj2 minV) =
+  T.pack $ show maj1 ++ "." ++ show maj2 ++ "." ++ show minV
+
+formatNightlyVersion :: NightlyVersion -> Text
+formatNightlyVersion (NightlyVersion year month day) =
+  T.pack $ printf "%d-%02d-%02d" year month day
 
 -- | Generate CSV files from the stackage-snapshots repository
 generateCSVs :: FilePath -> IO ()
@@ -74,20 +103,27 @@ processNightlySnapshots nightlyDir = do
   return $ concat results
   where
     processYear dir yearStr = do
-      let yearPath = dir </> yearStr
-      monthDirs <- listDirectory yearPath
-      months <- mapM (processMonth yearPath yearStr) monthDirs
-      return $ concat months
+      case reads yearStr of
+        [(year, "")] -> do
+          let yearPath = dir </> yearStr
+          monthDirs <- listDirectory yearPath
+          months <- mapM (processMonth yearPath year) monthDirs
+          return $ concat months
+        _ -> return []
     processMonth dir year monthStr = do
-      let monthPath = dir </> monthStr
-      dayFiles <- listDirectory monthPath
-      mapM (processDay monthPath year monthStr) dayFiles
+      case reads monthStr of
+        [(month, "")] -> do
+          let monthPath = dir </> monthStr
+          dayFiles <- listDirectory monthPath
+          mapM (processDay monthPath year month) dayFiles
+        _ -> return []
     processDay dir year month fname
       | takeExtension fname == ".yaml" = do
-          let day = take (length fname - 5) fname
-          let dateStr = year ++ "-" ++ month ++ "-" ++ day
-          ghc <- extractGHCVersion (dir </> fname)
-          return (NightlyVersion $ T.pack dateStr, ghc)
+          case reads $ take (length fname - 5) fname of
+            [(day, "")] -> do
+              ghc <- extractGHCVersion (dir </> fname)
+              return (NightlyVersion year month day, ghc)
+            _ -> error $ "Invalid day in " ++ fname
       | otherwise = error $ "Unexpected file in nightly directory: " ++ fname ++ 
                            " (expected .yaml extension)"
 
@@ -103,15 +139,20 @@ extractGHCVersion file = do
         Just (Aeson.Object resolverObj) ->
           case Yaml.parseMaybe (.: "compiler") resolverObj of
             Just (Aeson.String compiler) -> 
-              return $ GHCVersion $ T.drop 4 compiler  -- Remove "ghc-" prefix
+              parseCompiler compiler file
             _ -> error $ "No compiler field in resolver in " ++ file
         _ ->
           -- Try old format (compiler at top level)
           case Yaml.parseMaybe (.: "compiler") obj of
             Just (Aeson.String compiler) -> 
-              return $ GHCVersion $ T.drop 4 compiler  -- Remove "ghc-" prefix
+              parseCompiler compiler file
             _ -> error $ "No compiler field in " ++ file
     _ -> error $ "Invalid YAML in " ++ file
+  where
+    parseCompiler compiler file =
+      case parseGHCVersionText (T.drop 4 compiler) of
+        Just ghc -> return ghc
+        Nothing -> error $ "Invalid GHC version format in " ++ file ++ ": " ++ T.unpack compiler
 
 -- | Write LTS CSV file
 writeLTSCSV :: FilePath -> [(LTSVersion, GHCVersion)] -> IO ()
@@ -120,8 +161,8 @@ writeLTSCSV path entries = do
   let lines = map formatLTSEntry sorted
   TIO.writeFile path $ T.unlines lines
   where
-    formatLTSEntry (LTSVersion maj min, GHCVersion ghc) =
-      T.pack (show maj) <> "." <> T.pack (show min) <> "," <> ghc
+    formatLTSEntry (LTSVersion maj min, ghc) =
+      T.pack (show maj) <> "." <> T.pack (show min) <> "," <> formatGHCVersion ghc
 
 -- | Write nightly CSV file
 writeNightlyCSV :: FilePath -> [(NightlyVersion, GHCVersion)] -> IO ()
@@ -130,8 +171,8 @@ writeNightlyCSV path entries = do
   let lines = map formatNightlyEntry sorted
   TIO.writeFile path $ T.unlines lines
   where
-    formatNightlyEntry (NightlyVersion date, GHCVersion ghc) =
-      date <> "," <> ghc
+    formatNightlyEntry (nightly, ghc) =
+      formatNightlyVersion nightly <> "," <> formatGHCVersion ghc
 
 -- | Generate GHC version map from LTS and nightly maps
 generateGHCMap :: [(LTSVersion, GHCVersion)] -> [(NightlyVersion, GHCVersion)] -> Map GHCVersion Snapshot
@@ -141,9 +182,9 @@ generateGHCMap ltsEntries nightlyEntries =
   in Map.union ltsMap nightlyMap
   where
     insertLTS (lts, ghc) m =
-      Map.insertWith (\_ old -> old) ghc (LTS lts) m
+      Map.insertWith (\new old -> new) ghc (LTS lts) m
     insertNightly (nightly, ghc) m =
-      Map.insertWith (\_ old -> old) ghc (Nightly nightly) m
+      Map.insertWith (\new old -> new) ghc (Nightly nightly) m
 
 -- | Write GHC CSV file
 writeGHCCSV :: FilePath -> Map GHCVersion Snapshot -> IO ()
@@ -152,10 +193,10 @@ writeGHCCSV path ghcMap = do
   let lines = map formatGHCEntry sorted
   TIO.writeFile path $ T.unlines lines
   where
-    formatGHCEntry (GHCVersion ghc, LTS (LTSVersion maj min)) =
-      ghc <> ",lts-" <> T.pack (show maj) <> "." <> T.pack (show min)
-    formatGHCEntry (GHCVersion ghc, Nightly (NightlyVersion date)) =
-      ghc <> ",nightly-" <> date
+    formatGHCEntry (ghc, LTS (LTSVersion maj min)) =
+      formatGHCVersion ghc <> ",lts-" <> T.pack (show maj) <> "." <> T.pack (show min)
+    formatGHCEntry (ghc, Nightly nightly) =
+      formatGHCVersion ghc <> ",nightly-" <> formatNightlyVersion nightly
 
 -- | Load snapshot database from CSV files
 loadSnapshotDB :: IO SnapshotDB
@@ -181,12 +222,12 @@ readLTSCSV path = do
   where
     parseLTSLine line =
       case T.splitOn "," line of
-        [ver, ghc] ->
+        [ver, ghcText] ->
           case T.splitOn "." ver of
             [majStr, minStr] ->
-              case (reads $ T.unpack majStr, reads $ T.unpack minStr) of
-                ([(maj, "")], [(min, "")]) ->
-                  [(LTSVersion maj min, GHCVersion ghc)]
+              case (reads $ T.unpack majStr, reads $ T.unpack minStr, parseGHCVersionText ghcText) of
+                ([(maj, "")], [(min, "")], Just ghc) ->
+                  [(LTSVersion maj min, ghc)]
                 _ -> []
             _ -> []
         _ -> []
@@ -204,7 +245,10 @@ readNightlyCSV path = do
   where
     parseNightlyLine line =
       case T.splitOn "," line of
-        [date, ghc] -> [(NightlyVersion date, GHCVersion ghc)]
+        [dateText, ghcText] ->
+          case (parseNightlyVersionText dateText, parseGHCVersionText ghcText) of
+            (Just nightly, Just ghc) -> [(nightly, ghc)]
+            _ -> []
         _ -> []
 
 -- | Read GHC CSV file
@@ -220,10 +264,10 @@ readGHCCSV path = do
   where
     parseGHCLine line =
       case T.splitOn "," line of
-        [ghc, snap] ->
-          case parseSnapshot snap of
-            Just s -> [(GHCVersion ghc, s)]
-            Nothing -> []
+        [ghcText, snap] ->
+          case (parseGHCVersionText ghcText, parseSnapshot snap) of
+            (Just ghc, Just s) -> [(ghc, s)]
+            _ -> []
         _ -> []
     parseSnapshot snap
       | T.isPrefixOf "lts-" snap =
@@ -234,5 +278,7 @@ readGHCCSV path = do
                 _ -> Nothing
             _ -> Nothing
       | T.isPrefixOf "nightly-" snap =
-          Just $ Nightly $ NightlyVersion $ T.drop 8 snap
+          case parseNightlyVersionText (T.drop 8 snap) of
+            Just nightly -> Just $ Nightly nightly
+            Nothing -> Nothing
       | otherwise = Nothing
