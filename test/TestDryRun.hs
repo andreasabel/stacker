@@ -6,7 +6,8 @@ import System.FilePath ((</>))
 import System.Process (readProcess)
 import System.Directory (setCurrentDirectory, getCurrentDirectory)
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as BSL8
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 
 dryRunTests :: [TestTree]
 dryRunTests =
@@ -22,4 +23,5 @@ runDryRunTest = do
   setCurrentDirectory "test/tests"
   output <- readProcess "stack-snapshots" ["dry-run"] ""
   setCurrentDirectory cwd
-  return $ BSL8.pack output
+  -- Properly encode as UTF-8
+  return $ BSL.fromStrict $ TE.encodeUtf8 $ T.pack output
