@@ -12,10 +12,9 @@ import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Options.Applicative
 import System.Console.ANSI
 import System.Directory (makeAbsolute, doesFileExist, createDirectoryIfMissing)
-import System.Environment (withArgs)
-import System.Exit (exitSuccess)
 import System.FilePath (takeDirectory, (</>))
 import Text.Printf (printf)
 import Types
@@ -27,7 +26,7 @@ import StackYaml
 import ColorOption
 import License (licenseText)
 import qualified XDG
-import qualified Options
+import qualified Options as Opts
 
 -- | Run a command
 runCommand :: Options -> IO ()
@@ -38,8 +37,34 @@ runCommand opts = do
     NumericVersion -> putStrLn appVersion
     PrintLicense -> putStrLn licenseText
     Help -> do
-      -- Re-parse with --help to trigger optparse-applicative's help
-      withArgs ["--help"] Options.parseOptions >> return ()
+      -- Manually render help text
+      -- While not ideal, this ensures help works. The structure mirrors optparse-applicative's output.
+      putStrLn $ "stack-snapshots version " ++ appVersion
+      putStrLn ""
+      putStrLn "Usage: stack-snapshots [COMMAND | (-V|--version) | --numeric-version |"
+      putStrLn "                         --license | (-h|--help)] [--color WHEN]"
+      putStrLn ""
+      putStrLn "  A tool to bump snapshots (resolvers) in stack*.yaml files"
+      putStrLn ""
+      putStrLn "Available options:"
+      putStrLn "  -V,--version             Print version information"
+      putStrLn "  --numeric-version        Print version number"
+      putStrLn "  --license                Print license text"
+      putStrLn "  -h,--help                Print help"
+      putStrLn "  --color WHEN             Use colored output (always, never, auto)"
+      putStrLn ""
+      putStrLn "Available commands:"
+      putStrLn "  bump                     Update stack*.yaml files"
+      putStrLn "  dry-run                  Show what would be updated (default)"
+      putStrLn "  update                   Update stackage snapshots database"
+      putStrLn "  info                     Print GHC version to snapshot mapping"
+      putStrLn "  config                   Configure stack-snapshots"
+      putStrLn "  version                  Print version information (also: -V, --version)"
+      putStrLn "  numeric-version          Print version number (also: --numeric-version)"
+      putStrLn "  license                  Print license text (also: --license)"
+      putStrLn "  help                     Print this help (also: -h, --help)"
+      putStrLn ""
+      putStrLn "For more information, see the README"
     Config configCmd -> runConfig configCmd  -- Handle config first!
     cmd -> runEssentialCommand useColor cmd
 

@@ -1,39 +1,33 @@
-module TestBump (bumpTests) where
+module TestBump (bumpTestsIO) where
 
 import Test.Tasty
 import Test.Tasty.Golden
-import System.FilePath ((</>))
+import System.FilePath ((</>), takeFileName)
 import System.Process (callProcess)
-import System.Directory (setCurrentDirectory, getCurrentDirectory, copyFile, removeFile)
+import System.Directory (setCurrentDirectory, getCurrentDirectory, copyFile, removeFile, listDirectory)
 import Control.Exception (bracket_)
+import Data.List (isSuffixOf, sort)
 
-bumpTests :: [TestTree]
-bumpTests =
-  [ goldenVsFileDiff
-      "bump stack-9.0.yaml"
-      (\ref new -> ["diff", "-u", ref, new])
-      "test/golden/tests/stack-9.0.yaml"
-      "test/tests/stack-9.0.yaml"
-      (runBumpTest "stack-9.0.yaml")
-  , goldenVsFileDiff
-      "bump stack-9.2.yaml"
-      (\ref new -> ["diff", "-u", ref, new])
-      "test/golden/tests/stack-9.2.yaml"
-      "test/tests/stack-9.2.yaml"
-      (runBumpTest "stack-9.2.yaml")
-  , goldenVsFileDiff
-      "bump stack-9.4.yaml"
-      (\ref new -> ["diff", "-u", ref, new])
-      "test/golden/tests/stack-9.4.yaml"
-      "test/tests/stack-9.4.yaml"
-      (runBumpTest "stack-9.4.yaml")
-  , goldenVsFileDiff
-      "bump stack-9.6.yaml"
-      (\ref new -> ["diff", "-u", ref, new])
-      "test/golden/tests/stack-9.6.yaml"
-      "test/tests/stack-9.6.yaml"
-      (runBumpTest "stack-9.6.yaml")
-  ]
+-- | Generate bump tests by finding all stack*.yaml files in test/tests
+bumpTestsIO :: IO [TestTree]
+bumpTestsIO = do
+  -- Find all .yaml files in test/tests that start with "stack"
+  allFiles <- listDirectory "test/tests"
+  let stackYamlFiles = sort $ filter (\f -> "stack" `isPrefixOf` f && ".yaml" `isSuffixOf` f) allFiles
+  return 
+    [ goldenVsFileDiff
+        ("bump " ++ file)
+        (\ref new -> ["diff", "-u", ref, new])
+        ("test/golden/tests" </> file)
+        ("test/tests" </> file)
+        (runBumpTest file)
+    | file <- stackYamlFiles
+    ]
+  where
+    isPrefixOf = isPrefixOf'
+    isPrefixOf' [] _ = True
+    isPrefixOf' _ [] = False
+    isPrefixOf' (x:xs) (y:ys) = x == y && isPrefixOf' xs ys
 
 runBumpTest :: FilePath -> IO ()
 runBumpTest file = do

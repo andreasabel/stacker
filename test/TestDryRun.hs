@@ -5,7 +5,8 @@ import Test.Tasty.Golden
 import System.FilePath ((</>))
 import System.Process (readProcess)
 import System.Directory (setCurrentDirectory, getCurrentDirectory)
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as BSL8
 
 dryRunTests :: [TestTree]
 dryRunTests =
@@ -15,10 +16,10 @@ dryRunTests =
       runDryRunTest
   ]
 
-runDryRunTest :: IO BS.ByteString
+runDryRunTest :: IO BSL.ByteString
 runDryRunTest = do
   cwd <- getCurrentDirectory
   setCurrentDirectory "test/tests"
   output <- readProcess "stack-snapshots" ["dry-run"] ""
   setCurrentDirectory cwd
-  return $ BS.pack $ map (fromIntegral . fromEnum) output
+  return $ BSL8.pack output

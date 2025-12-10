@@ -5,10 +5,12 @@ import TestDryRun
 import TestBump
 
 main :: IO ()
-main = defaultMain tests
+main = do
+  bumpTests <- bumpTestsIO
+  defaultMain $ tests bumpTests
 
-tests :: TestTree
-tests = testGroup "stack-snapshots tests"
+tests :: [TestTree] -> TestTree
+tests bumpTests = testGroup "stack-snapshots tests"
   [ testGroup "dry-run tests" dryRunTests
   , testGroup "bump tests" bumpTests
   ]

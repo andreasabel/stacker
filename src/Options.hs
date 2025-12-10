@@ -2,6 +2,7 @@
 
 module Options
   ( parseOptions
+  , optionsParserInfo
   , Options(..)
   ) where
 
@@ -11,13 +12,15 @@ import Types
 
 -- | Parse command-line options
 parseOptions :: IO Options
-parseOptions = customExecParser (prefs showHelpOnEmpty) opts
-  where
-    opts = info (optionsParser <**> helper)
-      ( fullDesc
-     <> progDesc "A tool to bump snapshots (resolvers) in stack*.yaml files"
-     <> header ("stack-snapshots version " ++ appVersion)
-     <> footer "For more information, see the README" )
+parseOptions = customExecParser (prefs showHelpOnEmpty) optionsParserInfo
+
+-- | Parser info (exported for help rendering)
+optionsParserInfo :: ParserInfo Options
+optionsParserInfo = info (optionsParser <**> helper)
+  ( fullDesc
+ <> progDesc "A tool to bump snapshots (resolvers) in stack*.yaml files"
+ <> header ("stack-snapshots version " ++ appVersion)
+ <> footer "For more information, see the README" )
 
 -- | Options parser
 optionsParser :: Parser Options
