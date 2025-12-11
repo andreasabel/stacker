@@ -12,7 +12,14 @@ author:             Andreas Abel
 maintainer:         andreas.abel@gu.se
 category:           Development
 build-type:         Simple
+
 extra-doc-files:    README.md
+
+data-dir:           data
+data-files:
+    ghc.csv
+    lts.csv
+    nightly.csv
 
 common warnings
     ghc-options:
