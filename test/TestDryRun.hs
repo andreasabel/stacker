@@ -4,9 +4,9 @@ import Test.Tasty
 import Test.Tasty.Golden
 import System.Process (readProcess)
 import System.Directory (setCurrentDirectory, getCurrentDirectory)
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
+import Data.ByteString.Lazy qualified as BSL
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
 
 dryRunTests :: [TestTree]
 dryRunTests =

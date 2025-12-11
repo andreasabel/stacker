@@ -9,8 +9,8 @@ module StackYaml
 import Control.Monad (filterM)
 import Data.List (isPrefixOf, isSuffixOf, sort)
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import Data.Text qualified as T
+import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist)
 import System.FilePath (takeFileName)
 import Types (Action(..))

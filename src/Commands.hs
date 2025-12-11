@@ -6,10 +6,10 @@ module Commands
 
 import Control.Monad (forM_, when, unless)
 import Data.List (sortBy)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Ord (comparing)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import System.Console.ANSI
 import System.Directory (makeAbsolute, doesFileExist)
 import System.FilePath ((</>))
@@ -22,7 +22,7 @@ import Analysis
 import StackYaml
 import ColorOption
 import License (licenseText)
-import qualified XDG
+import XDG qualified
 
 -- | Run a command
 runCommand :: Options -> IO ()

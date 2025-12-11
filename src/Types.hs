@@ -6,7 +6,7 @@ import Data.Map.Strict (Map)
 import Data.Text (Text)
 import Data.Version (showVersion)
 import GHC.Generics (Generic)
-import qualified Paths_stack_snapshots as Paths
+import Paths_stack_snapshots qualified as Paths
 
 -- | LTS version (e.g., "24.23" for lts-24.23)
 data LTSVersion = LTSVersion

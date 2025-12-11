@@ -9,11 +9,11 @@ import Prelude hiding (min, span)
 
 import Data.Functor ((<&>))
 import Data.List (maximumBy)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Ord (comparing)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Text.Printf (printf)
 
 import Types (Action(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))

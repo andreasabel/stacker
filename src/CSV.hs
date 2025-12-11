@@ -9,16 +9,16 @@ import Prelude hiding (lines, min)
 
 import Data.List (sortBy, sortOn)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Ord (comparing)
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import Data.Text qualified as T
+import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, createDirectoryIfMissing)
 import System.FilePath ((</>), takeExtension)
-import qualified Data.Yaml as Yaml
+import Data.Yaml qualified as Yaml
 import Data.Yaml ((.:))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Text.Printf (printf)
 import Types (LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..), SnapshotDB(..))
 import XDG (getStateDir)
