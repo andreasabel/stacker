@@ -1,8 +1,8 @@
 module Main where
 
-import Test.Tasty
-import TestDryRun
-import TestBump
+import Test.Tasty ( defaultMain, testGroup, TestTree )
+import TestDryRun ( dryRunTests )
+import TestBump ( bumpTestsIO )
 
 main :: IO ()
 main = do

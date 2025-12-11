@@ -6,16 +6,13 @@ module Commands
 
 import Control.Monad (forM_, when, unless)
 import Data.List (sortBy)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import Options.Applicative
 import System.Console.ANSI
-import System.Directory (makeAbsolute, doesFileExist, createDirectoryIfMissing)
-import System.FilePath (takeDirectory, (</>))
+import System.Directory (makeAbsolute, doesFileExist)
+import System.FilePath ((</>))
 import Text.Printf (printf)
 import Types
 import Config
@@ -26,7 +23,6 @@ import StackYaml
 import ColorOption
 import License (licenseText)
 import qualified XDG
-import qualified Options as Opts
 
 -- | Run a command
 runCommand :: Options -> IO ()
@@ -177,8 +173,8 @@ formatGHCVersionText (GHCVersion maj1 maj2 minV) =
 
 -- | Format snapshot as text
 formatSnapshotText :: Snapshot -> Text
-formatSnapshotText (LTS (LTSVersion maj min)) =
-  "lts-" <> T.pack (show maj) <> "." <> T.pack (show min)
+formatSnapshotText (LTS (LTSVersion major minor)) =
+  "lts-" <> T.pack (show major) <> "." <> T.pack (show minor)
 formatSnapshotText (Nightly (NightlyVersion year month day)) =
   T.pack $ "nightly-" ++ printf "%d-%02d-%02d" year month day
 

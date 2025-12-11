@@ -7,12 +7,10 @@ module CSV
 
 import Prelude hiding (lines, min)
 
-import Control.Monad (forM_)
-import Data.List (sort, sortBy, sortOn)
-import Data.List.Split (splitOn)
+import Data.List (sortBy, sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ord (comparing, Down(..))
+import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -154,17 +152,17 @@ extractGHCVersion file = do
         Just (Aeson.Object resolverObj) ->
           case Yaml.parseMaybe (.: "compiler") resolverObj of
             Just (Aeson.String compiler) ->
-              parseCompiler compiler file
+              parseCompiler compiler
             _ -> error $ "No compiler field in resolver in " ++ file
         _ ->
           -- Try old format (compiler at top level)
           case Yaml.parseMaybe (.: "compiler") obj of
             Just (Aeson.String compiler) ->
-              parseCompiler compiler file
+              parseCompiler compiler
             _ -> error $ "No compiler field in " ++ file
     _ -> error $ "Invalid YAML in " ++ file
   where
-    parseCompiler compiler file =
+    parseCompiler compiler =
       case parseGHCVersionText (T.drop 4 compiler) of
         Just ghc -> return ghc
         Nothing -> error $ "Invalid GHC version format in " ++ file ++ ": " ++ T.unpack compiler

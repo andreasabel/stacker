@@ -2,7 +2,6 @@ module TestDryRun (dryRunTests) where
 
 import Test.Tasty
 import Test.Tasty.Golden
-import System.FilePath ((</>))
 import System.Process (readProcess)
 import System.Directory (setCurrentDirectory, getCurrentDirectory)
 import qualified Data.ByteString.Lazy as BSL

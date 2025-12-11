@@ -45,8 +45,8 @@ parseStackYaml file = do
       findFieldHelper field s pos s
 
     findFieldHelper :: String -> String -> Int -> String -> Maybe (String, Int, Int)
-    findFieldHelper field orig pos [] = Nothing
-    findFieldHelper field orig pos s@(c:cs)
+    findFieldHelper _field _orig _pos [] = Nothing
+    findFieldHelper field orig pos s@(_:cs)
       | field `isPrefixOf` s =
           let afterField = drop (length field) s
               trimmed = dropWhile (\c -> c `elem` (" \t" :: String)) afterField
