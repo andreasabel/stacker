@@ -61,14 +61,14 @@ ensureCSVFiles :: IO ()
 ensureCSVFiles = do
   stateDir <- getStateDir
   createDirectoryIfMissing True stateDir
-  
+
   dataDir <- getDataDir
-  
+
   -- Check if any CSV file is missing
   ghcExists <- doesFileExist (stateDir </> "ghc.csv")
   ltsExists <- doesFileExist (stateDir </> "lts.csv")
   nightlyExists <- doesFileExist (stateDir </> "nightly.csv")
-  
+
   unless (ghcExists && ltsExists && nightlyExists) $ do
     TIO.hPutStrLn stderr "Copying CSV files from data directory..."
     -- Copy all three CSV files from data directory

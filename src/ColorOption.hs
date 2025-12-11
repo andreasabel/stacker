@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ColorOption 
+module ColorOption
   ( ColorWhen(..)
   , shouldUseColor
   ) where
