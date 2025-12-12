@@ -20,7 +20,7 @@ runDryRunTest :: IO BSL.ByteString
 runDryRunTest = do
   cwd <- getCurrentDirectory
   setCurrentDirectory "test/tests"
-  output <- readProcess "stack-snapshots" ["dry-run"] ""
+  output <- readProcess "stack-snapshots" ["dry-run", "--color=never"] ""
   setCurrentDirectory cwd
   -- Properly encode as UTF-8
   return $ BSL.fromStrict $ TE.encodeUtf8 $ T.pack output
