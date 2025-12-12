@@ -96,4 +96,4 @@ appName = "stack-snapshots"
 
 -- | Copyright information
 copyright :: String
-copyright = "Copyright (c) 2024 Andreas Abel"
+copyright = "Copyright (c) 2025 Andreas Abel"
