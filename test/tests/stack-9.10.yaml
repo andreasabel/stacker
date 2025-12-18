@@ -1,1 +1,6 @@
-resolver: nightly-2025-05-05
+resolver: nightly-2025-05-14
+
+packages:
+  - lib/
+  - backends/
+  - executable/

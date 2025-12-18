@@ -1,1 +1,6 @@
 resolver: lts-24.23
+
+packages:
+  - lib/
+  - backends/
+  - executable/
