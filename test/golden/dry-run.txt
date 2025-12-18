@@ -5,3 +5,4 @@ stack-9.2.yaml      lts-20.1                 → bump to lts-20.26
 stack-9.4.yaml      lts-21.20                → bump to lts-21.25
 stack-9.6.yaml      nightly-2023-08-04       → bump to lts-22.44
 stack-9.8.yaml      lts-23.12                → bump to lts-23.28
+stack.yaml          nightly-2025-05-14       = symlink to stack-9.10.yaml
