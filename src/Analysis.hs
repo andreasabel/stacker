@@ -32,21 +32,19 @@ analyzeStackYaml db symlinkMap file = do
       let newSnap = determineNewSnapshot db oldSnap
       Just $ Action file oldSnap newSnap isResolver span symlinkTarget
 
--- | Analyze all stack*.yaml files in the current directory
-analyzeAllStackYamls :: SnapshotDB -> IO [Action]
-analyzeAllStackYamls db = do
-  files <- findStackYamlFiles
-  symlinkMap <- getSymlinkMap files
-  results <- mapM (analyzeStackYaml db symlinkMap) files
-  return $ catMaybes results
-
 -- | Analyze specific stack*.yaml files, or all if empty list
 analyzeStackYamls :: SnapshotDB -> [FilePath] -> IO [Action]
-analyzeStackYamls db [] = analyzeAllStackYamls db
+analyzeStackYamls db [] = do
+  files <- findStackYamlFiles
+  analyzeStackYamls db files
 analyzeStackYamls db files = do
   symlinkMap <- getSymlinkMap files
   results <- mapM (analyzeStackYaml db symlinkMap) files
   return $ catMaybes results
+
+-- | Analyze all stack*.yaml files in the current directory
+analyzeAllStackYamls :: SnapshotDB -> IO [Action]
+analyzeAllStackYamls db = analyzeStackYamls db []
 
 -- | Determine the new snapshot for a given old snapshot
 determineNewSnapshot :: SnapshotDB -> Text -> Maybe Text
