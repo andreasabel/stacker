@@ -8,6 +8,7 @@ module Analysis
 
 import Prelude hiding (min, span)
 
+import Control.Monad (filterM)
 import Data.Functor ((<&>))
 import Data.List (maximumBy)
 import Data.Map.Strict qualified as Map
@@ -15,6 +16,7 @@ import Data.Maybe (catMaybes)
 import Data.Ord (comparing)
 import Data.Text (Text)
 import Data.Text qualified as T
+import System.Directory (doesFileExist)
 import Text.Printf (printf)
 
 import Types (Action(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
@@ -35,7 +37,9 @@ analyzeStackYaml db symlinkMap file = do
 -- | Analyze specific stack*.yaml files, or all if empty list
 analyzeStackYamls :: SnapshotDB -> [FilePath] -> IO [Action]
 analyzeStackYamls db files = do
-  filesToAnalyze <- if null files then findStackYamlFiles else return files
+  filesToAnalyze <- if null files 
+                    then findStackYamlFiles 
+                    else filterM doesFileExist files  -- Validate user-provided files exist
   symlinkMap <- getSymlinkMap filesToAnalyze
   results <- mapM (analyzeStackYaml db symlinkMap) filesToAnalyze
   return $ catMaybes results
