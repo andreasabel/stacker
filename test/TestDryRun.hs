@@ -12,7 +12,7 @@ dryRunTests :: [TestTree]
 dryRunTests =
   [ goldenVsString
       "dry-run output"
-      "test/golden/dry-run.txt"
+      "test/golden/dry-run.golden"
       runDryRunTest
   ]
 
