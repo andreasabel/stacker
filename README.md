@@ -43,6 +43,9 @@ These can be modified with the following option(s):
 |-----------|-------------------------|-----------------------------------|
 | `--color` | `always`,`never`,`auto` | Colored output? (Default: `auto`) |
 
+When `--color=auto` is used (the default), colors are disabled if the `NO_COLOR` environment variable is set to any value, following the standard described at https://no-color.org.
+Colors can still be forced on with `--color=always` even when `NO_COLOR` is set.
+
 It also has the following inessential commands (standard options) that just give information about itself:
 
 | Command           | Alternatives        | Description                                                                         |
