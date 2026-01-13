@@ -28,6 +28,7 @@ extra-doc-files:
 extra-source-files:
   test/tests/*.yaml
   test/golden/dry-run.golden
+  test/golden/dry-run-files.golden
   test/golden/tests/*.yaml
 
 data-dir:
