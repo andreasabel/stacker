@@ -57,13 +57,17 @@ configParser = Config <$> subparser
 repoParser :: Parser ConfigCmd
 repoParser = SetRepo <$> argument str (metavar "PATH")
 
+-- | Helper to parse file arguments
+filesParser :: ([FilePath] -> Command) -> Parser Command
+filesParser cmd = cmd <$> many (argument str (metavar "FILES..."))
+
 -- | Bump command parser
 bumpParser :: Parser Command
-bumpParser = Bump <$> many (argument str (metavar "FILES..."))
+bumpParser = filesParser Bump
 
 -- | Dry-run command parser
 dryRunParser :: Parser Command
-dryRunParser = DryRun <$> many (argument str (metavar "FILES..."))
+dryRunParser = filesParser DryRun
 
 -- | Color option parser
 colorOption :: Parser ColorWhen
