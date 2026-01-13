@@ -56,8 +56,8 @@ optionsParser =
       <|> flag' Help (long "help" <> short 'h' <> help "Print help")
       <|> pure (DryRun [])
     
-    -- Local color option with default
-    colorOptionLocal = colorOption <|> pure Auto
+    -- Local color option (same as global, since it has a default)
+    colorOptionLocal = colorOption
 
 -- | Config command parser
 configParser :: Parser Command
