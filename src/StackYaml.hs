@@ -8,7 +8,7 @@ module StackYaml
   , getSymlinkMap
   ) where
 
-import Control.Monad (filterM)
+import Control.Monad (filterM, when)
 import Data.List (isPrefixOf, isSuffixOf, sort)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
@@ -87,15 +87,20 @@ parseStackYaml file = do
       | otherwise = findFieldHelper field orig pos cs
 
 -- | Apply an action to update a stack.yaml file
-applyAction :: Action -> IO ()
-applyAction action = do
-  case actionNewSnapshot action of
-    Nothing -> return ()  -- No update needed
-    Just newSnap -> do
-      content <- TIO.readFile (actionFile action)
-      let (before, after) = splitAtSpan (actionSpan action) content
-      let updated = before <> newSnap <> after
-      TIO.writeFile (actionFile action) updated
+applyAction :: Bool -> Action -> IO ()
+applyAction verbose action = do
+  -- Skip symlinks that point to other stack*.yaml files in the list
+  case actionSymlinkTarget action of
+    Just _ -> return ()  -- Skip symlinks
+    Nothing ->
+      case actionNewSnapshot action of
+        Nothing -> return ()  -- No update needed
+        Just newSnap -> do
+          when verbose $ putStrLn $ "Updating " ++ actionFile action
+          content <- TIO.readFile (actionFile action)
+          let (before, after) = splitAtSpan (actionSpan action) content
+          let updated = before <> newSnap <> after
+          TIO.writeFile (actionFile action) updated
 
 -- | Split text at a character span
 splitAtSpan :: (Int, Int) -> Text -> (Text, Text)

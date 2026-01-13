@@ -6,12 +6,12 @@ import System.FilePath ((</>))
 import System.Directory (copyFile, setCurrentDirectory, getCurrentDirectory)
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Control.Monad (forM_)
+import Data.Maybe (catMaybes)
 
 -- Import from library
 import StackYaml (findStackYamlFiles, getSymlinkMap, applyAction)
 import Analysis (analyzeStackYaml)
 import CSV (loadSnapshotDB, ensureCSVFiles)
-import Data.Map.Strict qualified as Map
 
 -- | Generate bump tests - all files are bumped in one temp directory
 bumpTestsIO :: IO [TestTree]
@@ -42,16 +42,9 @@ bumpTestsIO = do
   -- Get symlink map
   symlinkMap <- getSymlinkMap stackYamlFiles
 
-  -- Analyze and apply actions for each file
-  forM_ stackYamlFiles $ \file -> do
-    -- Skip if this file is a symlink to another stack*.yaml
-    case Map.lookup file symlinkMap of
-      Just _ -> return ()  -- Skip symlinks
-      Nothing -> do
-        maybeAction <- analyzeStackYaml db symlinkMap file
-        case maybeAction of
-          Just action -> applyAction action
-          Nothing -> return ()
+  -- Get and run actions for each file
+  actions <- catMaybes <$>  mapM (analyzeStackYaml db symlinkMap) stackYamlFiles
+  mapM_ (applyAction False) actions
 
   setCurrentDirectory cwd
 

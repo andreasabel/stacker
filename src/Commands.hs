@@ -149,17 +149,7 @@ runBump :: IO ()
 runBump = do
   db <- loadSnapshotDB
   actions <- analyzeAllStackYamls db
-
-  forM_ actions $ \action -> do
-    -- Skip symlinks that point to other stack*.yaml files in the list
-    case actionSymlinkTarget action of
-      Just _ -> return ()  -- Skip symlinks
-      Nothing ->
-        case actionNewSnapshot action of
-          Nothing -> return ()
-          Just _ -> do
-            putStrLn $ "Updating " ++ actionFile action
-            applyAction action
+  mapM_ (applyAction True) actions
 
 -- | Run update command
 runUpdate :: FilePath -> IO ()
