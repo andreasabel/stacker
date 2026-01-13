@@ -19,7 +19,7 @@ bumpTestsIO :: IO [TestTree]
 bumpTestsIO = do
   -- Ensure CSV files are available
   ensureCSVFiles
-  
+
   -- Create a temp directory for this test run
   sysTempDir <- getCanonicalTemporaryDirectory
   tempDir <- createTempDirectory sysTempDir "stacker-test"
@@ -36,13 +36,13 @@ bumpTestsIO = do
 
   -- Run bump logic using library functions
   setCurrentDirectory tempDir
-  
+
   -- Load snapshot database
   db <- loadSnapshotDB
-  
+
   -- Get symlink map
   symlinkMap <- getSymlinkMap stackYamlFiles
-  
+
   -- Analyze and apply actions for each file
   forM_ stackYamlFiles $ \file -> do
     -- Skip if this file is a symlink to another stack*.yaml
@@ -53,7 +53,7 @@ bumpTestsIO = do
         case maybeAction of
           Just action -> applyAction action
           Nothing -> return ()
-  
+
   setCurrentDirectory cwd
 
   -- Create a golden test for each file

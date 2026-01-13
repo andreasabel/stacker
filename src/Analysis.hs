@@ -24,7 +24,7 @@ analyzeStackYaml :: SnapshotDB -> Map.Map FilePath FilePath -> FilePath -> IO (M
 analyzeStackYaml db symlinkMap file = do
   -- Check if this file is a symlink to another stack*.yaml file in our list
   let symlinkTarget = Map.lookup file symlinkMap
-  
+
   parseStackYaml file <&> \case
     Nothing -> Nothing
     Just (oldSnap, isResolver, span) -> do

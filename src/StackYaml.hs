@@ -37,10 +37,10 @@ getSymlinkMap :: [FilePath] -> IO (Map.Map FilePath FilePath)
 getSymlinkMap files = do
   -- Find symlinks in the list
   symlinks <- filterM pathIsSymbolicLink files
-  
+
   -- For each symlink, check if it points to another file in the list
   results <- mapM checkSymlink symlinks
-  
+
   return $ Map.fromList $ catMaybes results
   where
     checkSymlink :: FilePath -> IO (Maybe (FilePath, FilePath))

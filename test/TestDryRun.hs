@@ -27,21 +27,21 @@ runDryRunTest :: IO BSL.ByteString
 runDryRunTest = do
   -- Ensure CSV files are available
   ensureCSVFiles
-  
+
   cwd <- getCurrentDirectory
   setCurrentDirectory "test/tests"
-  
+
   -- Use library functions to generate dry-run output
   stackYamlFiles <- findStackYamlFiles
   db <- loadSnapshotDB
   symlinkMap <- getSymlinkMap stackYamlFiles
-  
+
   -- Analyze each file and collect actions
   actions <- mapM (analyzeFile db symlinkMap) stackYamlFiles
-  
+
   -- Format output like the real dry-run command
   let output = unlines $ map formatAction $ concat actions
-  
+
   setCurrentDirectory cwd
   -- Properly encode as UTF-8
   return $ BSL.fromStrict $ TE.encodeUtf8 $ T.pack output
@@ -49,7 +49,7 @@ runDryRunTest = do
     analyzeFile db symlinkMap file = do
       maybeAction <- analyzeStackYaml db symlinkMap file
       return $ maybe [] (:[]) maybeAction
-    
+
     formatAction action =
       let file = actionFile action
           oldSnap = actionOldSnapshot action
