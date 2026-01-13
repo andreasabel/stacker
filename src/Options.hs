@@ -28,6 +28,8 @@ optionsParserInfo = info (optionsParser <**> helper)
 -- This allows --color to be specified either before the subcommand
 -- (e.g., "stacker --color=never dry-run") or within the subcommand
 -- (e.g., "stacker dry-run --color=never file.yaml").
+-- Precedence: Subcommand parsers take priority, so "stacker dry-run --color=never"
+-- will be parsed by the subcommand parser, not the top-level parser.
 optionsParser :: Parser Options
 optionsParser = 
   -- Try to parse as subcommand with options first
@@ -35,17 +37,21 @@ optionsParser =
   -- Fall back to top-level options
   <|> topLevelOptions
   where
+    -- Helper to combine a command parser with the color option
+    withColorOption :: Parser Command -> Parser Options
+    withColorOption cmdParser = Options <$> cmdParser <*> colorOption
+    
     -- Subcommands that include color option
     subcommandWithOptions = subparser
-      ( command "bump" (info (Options <$> bumpParser <*> colorOption) (progDesc "Update stack*.yaml files (optionally specify files)"))
-     <> command "dry-run" (info (Options <$> dryRunParser <*> colorOption) (progDesc "Show what would be updated (default, optionally specify files)"))
-     <> command "update" (info (Options <$> pure Update <*> colorOption) (progDesc "Update stackage snapshots database"))
-     <> command "info" (info (Options <$> pure Info <*> colorOption) (progDesc "Print GHC version to snapshot mapping"))
-     <> command "config" (info (Options <$> configParser <*> colorOption) (progDesc "Configure stacker"))
-     <> command "version" (info (Options <$> pure Version <*> colorOption) (progDesc "Print version information (also: -V, --version)"))
-     <> command "numeric-version" (info (Options <$> pure NumericVersion <*> colorOption) (progDesc "Print version number (also: --numeric-version)"))
-     <> command "license" (info (Options <$> pure PrintLicense <*> colorOption) (progDesc "Print license text (also: --license)"))
-     <> command "help" (info (Options <$> pure Help <*> colorOption) (progDesc "Print this help (also: -h, --help)"))
+      ( command "bump" (info (withColorOption bumpParser) (progDesc "Update stack*.yaml files (optionally specify files)"))
+     <> command "dry-run" (info (withColorOption dryRunParser) (progDesc "Show what would be updated (default, optionally specify files)"))
+     <> command "update" (info (withColorOption (pure Update)) (progDesc "Update stackage snapshots database"))
+     <> command "info" (info (withColorOption (pure Info)) (progDesc "Print GHC version to snapshot mapping"))
+     <> command "config" (info (withColorOption configParser) (progDesc "Configure stacker"))
+     <> command "version" (info (withColorOption (pure Version)) (progDesc "Print version information (also: -V, --version)"))
+     <> command "numeric-version" (info (withColorOption (pure NumericVersion)) (progDesc "Print version number (also: --numeric-version)"))
+     <> command "license" (info (withColorOption (pure PrintLicense)) (progDesc "Print license text (also: --license)"))
+     <> command "help" (info (withColorOption (pure Help)) (progDesc "Print this help (also: -h, --help)"))
       )
     
     -- Top level parsing (for flags and default)
