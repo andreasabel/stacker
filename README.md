@@ -32,7 +32,7 @@ inspects the value of the `snapshot:` (or `resolver:`) field and upgrades it in 
 | Command           | Description                                                                         |
 |-------------------|-------------------------------------------------------------------------------------|
 | `bump [FILES...]` | Updates `stack*.yaml` files (all if no files specified)                            |
-| `dry-run [FILES...]` | Only describes the updates `bump` would perform (default if no command is given, all files if no files specified) |
+| `dry-run [FILES...]` | Shows what updates would be performed (default command, all files if none specified) |
 | `config`          | Configures `stack-snaphots`                                                         |
 | `update`          | Updates its database of stackage snapshots                                          |
 | `info`            | Prints table mapping GHC major versions to their latest snapshots                   |
