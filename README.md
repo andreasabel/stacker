@@ -1,8 +1,8 @@
-# stack-snapshots
+# stacker
 
-Bump snapshots (aka resolvers) in `stack*.yaml` files in the current directory.
+Bump snapshots (aka resolvers) in `stack*.yaml` files.
 
-The tool `stack-snapshots` goes through the `stack*.yaml` files in the current directory,
+The `stacker` tools goes through the given fiels (or all `stack*.yaml` files in the current directory),
 inspects the value of the `snapshot:` (or `resolver:`) field and upgrades it in the following way:
 
 1. If the value is pointing to a LTS snapshot, e.g., `lts-24.10`,
@@ -27,15 +27,15 @@ inspects the value of the `snapshot:` (or `resolver:`) field and upgrades it in 
 
 ## Synopsis
 
-`stack-snapshots` understands the following essential commands:
+`stacker` understands the following essential commands:
 
-| Command           | Description                                                                         |
-|-------------------|-------------------------------------------------------------------------------------|
-| `bump [FILES...]` | Updates `stack*.yaml` files (all if no files specified)                            |
-| `dry-run [FILES...]` | Shows what updates would be performed (default command, all files if none specified) |
-| `config`          | Configures `stack-snaphots`                                                         |
-| `update`          | Updates its database of stackage snapshots                                          |
-| `info`            | Prints table mapping GHC major versions to their latest snapshots                   |
+| Command              | Description                                                                      |
+|----------------------|----------------------------------------------------------------------------------|
+| `bump [FILES...]`    | Updates FILES (all `stack*.yaml` files if none specified)                        |
+| `dry-run [FILES...]` | Shows what updates would be performed by the respective `bump` (default command) |
+| `config`             | Configures `stacker`                                                             |
+| `update`             | Updates its database of stackage snapshots                                       |
+| `info`               | Prints table mapping GHC major versions to their latest snapshots                |
 
 These can be modified with the following option(s):
 
@@ -43,7 +43,9 @@ These can be modified with the following option(s):
 |-----------|-------------------------|-----------------------------------|
 | `--color` | `always`,`never`,`auto` | Colored output? (Default: `auto`) |
 
-When `--color=auto` is used (the default), colors are disabled if the `NO_COLOR` environment variable is set to any value, following the standard described at https://no-color.org.
+When `--color=auto` is used (the default), colors are disabled
+if the `NO_COLOR` environment variable is set to any value,
+following the standard described at https://no-color.org.
 Colors can still be forced on with `--color=always` even when `NO_COLOR` is set.
 
 It also has the following inessential commands (standard options) that just give information about itself:
@@ -55,12 +57,12 @@ It also has the following inessential commands (standard options) that just give
 | `license`         | `--license`         | Prints the license text (BSD 3-clause)                                              |
 | `help`            | `--help`, `-h`      | Prints `--version`, one paragraph description of functionality, and list of options |
 
-`stack-snapshots` runs on the 3 major platforms Linux, macOS, and Windows.
+`stacker` runs on the 3 major platforms Linux, macOS, and Windows.
 
 ## Data files
 
-`stack-snapshots` comes with 3 data files that are copied into its
-XDG-conform application directory (`$XDG_STATE_HOME/stack-snapshots`)
+`stacker` comes with 3 data files that are copied into its
+XDG-conform application directory (`$XDG_STATE_HOME/stacker`)
 whenever the program is invoked and they do not exist there yet.
 
 1. `lts.csv` containing a map from LTS version to GHC version, e.g.
@@ -108,11 +110,11 @@ These data files determine the results of `bump` (and its preview by `dry-run`).
 
 ## `bump` command
 
-`stack-snapshots bump` looks for all `stack*.yaml` files in the current directory and updates them as described above.
+`stacker bump` looks for all `stack*.yaml` files in the current directory and updates them as described above.
 
 Alternatively, you can specify specific files to bump:
 ```
-stack-snapshots bump stack-9.6.yaml stack-9.8.yaml
+stacker bump stack-9.6.yaml stack-9.8.yaml
 ```
 
 Only the content of the `snapshot:` and `resolver:` fields will be updated,
@@ -120,13 +122,13 @@ everything else will remain literally the same, including comments and whitespac
 
 ## `dry-run` command
 
-This command is also run if no command is given to `stack-snapshots`.
+This command is also run if no command is given to `stacker`.
 It prints a table with all `stack*.yaml` files in the current directory,
 their `snapshot` (which can also be given in the `resolver` field), and what action to take (if any).
 
 Alternatively, you can specify specific files to check:
 ```
-stack-snapshots dry-run stack-9.6.yaml stack-9.8.yaml
+stacker dry-run stack-9.6.yaml stack-9.8.yaml
 ```
 
 Example output:
@@ -145,51 +147,51 @@ yet `dry-run` just pretty-prints this plan as detailed above whereas `bump` exec
 
 ## Configuration (optional)
 
-`stack-snapshots update` regenerates its information about GHC versions and Stackage snapshots from the repository
+`stacker update` regenerates its information about GHC versions and Stackage snapshots from the repository
 https://github.com/commercialhaskell/stackage-snapshots .
 
-If you have a clone of this repository already, you might want to configure `stack-snapshots` to use it
+If you have a clone of this repository already, you might want to configure `stacker` to use it
 so it does not make its own clone (which takes ~2GB of disk space).
 
-By default, `stack-snapshots` stores information about the stackage snapshots
-in its XDG-conform application directory (`$XDG_STATE_HOME/stack-snapshots`),
+By default, `stacker` stores information about the stackage snapshots
+in its XDG-conform application directory (`$XDG_STATE_HOME/stacker`),
 by creating a shallow git clone of said repository there
-(typically `$XDG_STATE_HOME/stack-snapshots/stackage-snapshots`).
+(typically `$XDG_STATE_HOME/stacker/stackage-snapshots`).
 
 With the command
 ```
-   stack-snapshots config repo path/to/dir
+   stacker config repo path/to/dir
 ```
 the stackage-snapshots repository will be instead searched for in `path/to/dir`.
 The effect of the `config` command is to write file `config.yaml`
-in the XDG-conform configuration directory (`$XDG_CONFIG_HOME/stack-snapshots`)
+in the XDG-conform configuration directory (`$XDG_CONFIG_HOME/stacker`)
 with the following content:
 ```yaml
-# stack-snapshots configuration
+# stacker configuration
 
 repo: /absolute/path/to/dir
 ```
 where `/absolute/path/to/dir` is the `path/to/dir` turned into an absolute path.
 
-Whenever `stack-snapshots` is started with an essential command,
+Whenever `stacker` is started with an essential command,
 it will attempt to read this configuration file and extract the value of `repo`, if it is given.
 We shall refer to this value as `$REPO`.
-It defaults to `$XDG_STATE_HOME/stack-snapshots/stackage-snapshots` if not configured.
+It defaults to `$XDG_STATE_HOME/stacker/stackage-snapshots` if not configured.
 
 ## `update` command
 
-`stack-snapshots update` first prints the path to the repo (value of `$REPO`).
+`stacker update` first prints the path to the repo (value of `$REPO`).
 If the repo does not exist,
 it will be created as a shallow git clone of https://github.com/commercialhaskell/stackage-snapshots .
 
-Once created, it will only be updated by `stack-snapshots update`, and then only if its `master` branch is checked out.
+Once created, it will only be updated by `stacker update`, and then only if its `master` branch is checked out.
 If another branch is checked out, the `update` command exits with an error.
 
-The `update` command then regenerates then three files `lts.csv`, `nightly.csv` and `ghc.csv` in `$XDG_STATE_HOME/stack-snapshots/`.
+The `update` command then regenerates then three files `lts.csv`, `nightly.csv` and `ghc.csv` in `$XDG_STATE_HOME/stacker/`.
 
 ## `info` command
 
-`stack-snapshots info` prints the following things in YAML format:
+`stacker info` prints the following things in YAML format:
 1. `repo: $REPO`
 2. A map between each latest major GHC version and its corresponding latest LTS or nightly snapshot,
    as read from `ghc.csv`.  Example:
