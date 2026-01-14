@@ -17,8 +17,8 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
-import System.FilePath (takeFileName, takeDirectory, normalise, makeRelative, splitDirectories, joinPath)
-import PathUtil ((</>), normalizeFilePath)
+import System.FilePath (takeFileName, takeDirectory)
+import PathUtil ((</>), normalizeFilePath, collapseDots)
 import Types (Action(..))
 
 -- | Check if a filename is a stack*.yaml file
@@ -75,25 +75,12 @@ getSymlinkMap files = do
       -- Resolve the target relative to the symlink's directory
       let symlinkDir = takeDirectory link
       let targetPath = symlinkDir </> target
-      -- Normalize and collapse .. components
-      let normalizedTarget = collapseDotDots $ normalise targetPath
-      let relativeTarget = normalizeFilePath $ makeRelative "." normalizedTarget
+      -- Normalize and collapse .. components using our custom functions
+      let normalizedTarget = normalizeFilePath $ collapseDots targetPath
       -- Check if the target is in our file list
-      if relativeTarget `elem` files
-        then return $ Just (link, relativeTarget)
+      if normalizedTarget `elem` files
+        then return $ Just (link, normalizedTarget)
         else return Nothing
-    
-    -- Collapse .. components in a path
-    collapseDotDots :: FilePath -> FilePath
-    collapseDotDots path =
-      let dirs = splitDirectories path
-          collapsed = foldl collapseDir [] dirs
-      in joinPath collapsed
-    
-    collapseDir :: [String] -> String -> [String]
-    collapseDir acc "." = acc
-    collapseDir (dir:rest) ".." | dir /= ".." = rest
-    collapseDir acc dir = acc ++ [dir]
 
 -- | Parse a stack.yaml file to extract the snapshot field
 parseStackYaml :: FilePath -> IO (Maybe (Text, Bool, (Int, Int)))

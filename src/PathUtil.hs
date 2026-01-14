@@ -11,6 +11,9 @@
 module PathUtil
   ( (</>)
   , normalizeFilePath
+  , splitPath
+  , joinPath
+  , collapseDots
   ) where
 
 import Data.List (stripPrefix)
@@ -34,3 +37,31 @@ normalizeFilePath path =
   case stripPrefix "./" path of
     Just rest -> rest
     Nothing -> path
+
+-- | Split a path into components using forward slash as separator
+-- Works consistently across all platforms
+splitPath :: FilePath -> [String]
+splitPath "" = []
+splitPath path = split path
+  where
+    split "" = []
+    split s = case break (== '/') s of
+      (comp, "") -> [comp]
+      (comp, _:rest) -> comp : split rest
+
+-- | Join path components using forward slash
+-- Works consistently across all platforms
+joinPath :: [String] -> FilePath
+joinPath [] = ""
+joinPath [x] = x
+joinPath (x:xs) = x ++ "/" ++ joinPath xs
+
+-- | Collapse ".." and "." components in a path
+-- This normalizes paths like "a/b/../c" to "a/c"
+collapseDots :: FilePath -> FilePath
+collapseDots path = joinPath $ reverse $ foldl collapseDir [] (splitPath path)
+  where
+    collapseDir :: [String] -> String -> [String]
+    collapseDir acc "." = acc
+    collapseDir (prev:rest) ".." | prev /= ".." = rest
+    collapseDir acc dir = dir : acc
