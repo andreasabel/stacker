@@ -114,21 +114,26 @@ runDryRun useColor files recursive = do
 
   -- Sort actions by filename
   let sortedActions = sortBy (comparing actionFile) actions
+  
+  -- Calculate the maximum filename length for proper alignment
+  let maxFileLen = if null sortedActions 
+                   then 20 
+                   else max 20 (maximum (map (length . actionFile) sortedActions))
 
   forM_ sortedActions $ \action -> do
-    printAction useColor action
+    printActionWithWidth useColor maxFileLen action
 
--- | Print an action
-printAction :: Bool -> Action -> IO ()
-printAction useColor action = do
+-- | Print an action with a specified column width for filenames
+printActionWithWidth :: Bool -> Int -> Action -> IO ()
+printActionWithWidth useColor fileWidth action = do
   let file = actionFile action
   let oldSnap = actionOldSnapshot action
   let newSnap = actionNewSnapshot action
   let symlinkTarget = actionSymlinkTarget action
 
-  -- Print with proper alignment (file padded to 20 chars, oldSnap to 25 chars)
+  -- Print with proper alignment (file padded to fileWidth chars, oldSnap to 25 chars)
   withColor useColor [SetConsoleIntensity BoldIntensity] $
-    putStr $ padRight 20 file
+    putStr $ padRight fileWidth file
 
   putStr $ padRight 25 (T.unpack oldSnap)
 
