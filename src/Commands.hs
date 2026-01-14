@@ -117,9 +117,9 @@ runDryRun useColor files recursive = do
   let sortedActions = sortBy (comparing actionFile) actions
   
   -- Calculate the maximum filename length for proper alignment (add 2 for padding)
-  let maxFileLen = if null sortedActions 
-                   then 20 
-                   else max 20 (maximum (map (length . actionFile) sortedActions) + 2)
+  let maxFileLen = case sortedActions of
+        [] -> 20
+        acts -> max 20 (maximum (map (length . actionFile) acts) + 2)
 
   forM_ sortedActions $ \action -> do
     printActionWithWidth useColor maxFileLen action
