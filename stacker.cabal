@@ -78,6 +78,7 @@ library
     Commands
     XDG
     Types
+    PathUtil
   other-modules:
     Paths_stacker
   autogen-modules:

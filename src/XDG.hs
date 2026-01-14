@@ -6,7 +6,7 @@ module XDG
   ) where
 
 import System.Directory (getXdgDirectory, XdgDirectory(..))
-import System.FilePath ((</>))
+import PathUtil ((</>))
 import Types (appName)
 
 -- | Get the XDG state directory for the application

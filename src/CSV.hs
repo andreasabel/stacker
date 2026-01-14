@@ -17,7 +17,8 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, createDirectoryIfMissing)
-import System.FilePath ((</>), takeExtension)
+import System.FilePath (takeExtension)
+import PathUtil ((</>))
 import Data.Yaml qualified as Yaml
 import Data.Yaml ((.:))
 import Data.Aeson qualified as Aeson
