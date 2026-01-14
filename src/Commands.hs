@@ -53,6 +53,8 @@ runCommand opts = do
       putStrLn ""
       putStrLn "Available options:"
       putStrLn "  --color WHEN             Use colored output (always, never, auto)"
+      putStrLn "  -r,--recursive           Search subdirectories for stack*.yaml files"
+      putStrLn "                           (commands bump and dry-run)"
       putStrLn ""
       putStrLn "Inessential commands:"
       putStrLn "  version                  Print version information (also: -V, --version)"

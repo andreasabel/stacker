@@ -17,7 +17,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
-import System.FilePath (takeFileName, normalise, makeRelative, (</>))
+import System.FilePath (takeFileName, normalise, makeRelative)
 import Types (Action(..))
 
 -- | Check if a filename is a stack*.yaml file
@@ -41,7 +41,8 @@ findStackYamlFilesRecursive = findStackYamlFilesInDir "."
 findStackYamlFilesInDir :: FilePath -> IO [FilePath]
 findStackYamlFilesInDir dir = do
   entries <- listDirectory dir
-  let fullPaths = map (dir </>) entries
+  -- Use "/" instead of </> to ensure consistent paths across all OSs
+  let fullPaths = map (\entry -> dir ++ "/" ++ entry) entries
   
   -- Process files and directories separately
   files <- filterM doesFileExist fullPaths

@@ -61,7 +61,7 @@ optionsParser = subcommandWithOptions <|> topLevelOptions
       <|> flag' NumericVersion (long "numeric-version" <> help "Print version number")
       <|> flag' PrintLicense (long "license" <> help "Print license text")
       <|> flag' Help (long "help" <> short 'h' <> help "Print help")
-      <|> pure (DryRun [] False)
+      <|> (DryRun [] <$> recursiveOption)
 
 -- | Config command parser
 configParser :: Parser Command

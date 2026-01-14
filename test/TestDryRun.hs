@@ -35,7 +35,8 @@ runDryRunRecursiveTest :: IO BSL.ByteString
 runDryRunRecursiveTest = do
   cwd <- getCurrentDirectory
   setCurrentDirectory "test/recursive"
-  output <- readProcess "stacker" ["dry-run", "--recursive", "--color=never"] ""
+  -- Test that just --recursive works (defaults to dry-run)
+  output <- readProcess "stacker" ["--recursive", "--color=never"] ""
   setCurrentDirectory cwd
   -- Sort the output lines for consistent comparison
   let sortedLines = T.unlines $ sort $ T.lines $ T.pack output
