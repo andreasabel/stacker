@@ -16,6 +16,7 @@ module PathUtil
   , collapseDots
   , takeDirectory
   , takeFileName
+  , toForwardSlashes
   ) where
 
 import Data.List (stripPrefix)
@@ -89,3 +90,9 @@ takeFileName path =
   case reverse (filter (not . null) (splitPath path)) of
     [] -> ""
     (name:_) -> name
+
+-- | Convert backslashes to forward slashes
+-- This is needed to normalize paths returned by Windows system calls
+-- to use forward slashes consistently
+toForwardSlashes :: FilePath -> FilePath
+toForwardSlashes = map (\c -> if c == '\\' then '/' else c)

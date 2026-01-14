@@ -17,7 +17,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
-import PathUtil ((</>), normalizeFilePath, collapseDots, takeDirectory, takeFileName)
+import PathUtil ((</>), normalizeFilePath, collapseDots, takeDirectory, takeFileName, toForwardSlashes)
 import Types (Action(..))
 
 -- | Check if a filename is a stack*.yaml file
@@ -71,14 +71,16 @@ getSymlinkMap files = do
     checkSymlink :: FilePath -> IO (Maybe (FilePath, FilePath))
     checkSymlink link = do
       target <- getSymbolicLinkTarget link
+      -- Convert backslashes to forward slashes (Windows compatibility)
+      let normalizedTarget = toForwardSlashes target
       -- Resolve the target relative to the symlink's directory
       let symlinkDir = takeDirectory link
-      let targetPath = symlinkDir </> target
+      let targetPath = symlinkDir </> normalizedTarget
       -- Normalize and collapse .. components using our custom functions
-      let normalizedTarget = normalizeFilePath $ collapseDots targetPath
+      let resolvedTarget = normalizeFilePath $ collapseDots targetPath
       -- Check if the target is in our file list
-      if normalizedTarget `elem` files
-        then return $ Just (link, normalizedTarget)
+      if resolvedTarget `elem` files
+        then return $ Just (link, resolvedTarget)
         else return Nothing
 
 -- | Parse a stack.yaml file to extract the snapshot field
