@@ -17,8 +17,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
-import System.FilePath (takeFileName, takeDirectory)
-import PathUtil ((</>), normalizeFilePath, collapseDots)
+import PathUtil ((</>), normalizeFilePath, collapseDots, takeDirectory, takeFileName)
 import Types (Action(..))
 
 -- | Check if a filename is a stack*.yaml file

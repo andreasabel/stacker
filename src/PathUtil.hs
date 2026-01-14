@@ -14,6 +14,8 @@ module PathUtil
   , splitPath
   , joinPath
   , collapseDots
+  , takeDirectory
+  , takeFileName
   ) where
 
 import Data.List (stripPrefix)
@@ -66,3 +68,22 @@ collapseDots path = joinPath $ reverse $ foldl collapseDir [] (splitPath path)
     collapseDir (prev:rest) ".." | prev /= ".." = rest
     collapseDir acc ".." = ".." : acc
     collapseDir acc dir = dir : acc
+
+-- | Get the directory part of a file path
+-- Uses forward slash as separator on all platforms
+-- Examples: takeDirectory "a/b/c" = "a/b", takeDirectory "file.txt" = "."
+takeDirectory :: FilePath -> FilePath
+takeDirectory path =
+  case reverse (splitPath path) of
+    [] -> "."
+    [_] -> "."
+    (_:dirs) -> joinPath (reverse dirs)
+
+-- | Get the file name part of a file path
+-- Uses forward slash as separator on all platforms
+-- Examples: takeFileName "a/b/c.txt" = "c.txt", takeFileName "file.txt" = "file.txt"
+takeFileName :: FilePath -> FilePath
+takeFileName path =
+  case reverse (splitPath path) of
+    [] -> ""
+    (name:_) -> name
