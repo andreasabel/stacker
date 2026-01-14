@@ -119,7 +119,6 @@ test-suite stacker-test
     , tasty         >= 1.4
     , tasty-golden  >= 2.3
     , directory     >= 1.3.7.0
-    , filepath      >= 1.4
     , text          >= 2.0
     , bytestring    >= 0.11
     , temporary     >= 1.3

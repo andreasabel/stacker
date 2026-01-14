@@ -2,7 +2,6 @@ module TestBump (bumpTestsIO) where
 
 import Test.Tasty ( TestTree )
 import Test.Tasty.Golden ( goldenVsFileDiff )
-import System.FilePath ((</>))
 import System.Directory (copyFile, setCurrentDirectory, getCurrentDirectory)
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Control.Monad (forM_)
@@ -12,6 +11,7 @@ import Data.Maybe (catMaybes)
 import StackYaml (findStackYamlFiles, getSymlinkMap, applyAction)
 import Analysis (analyzeStackYaml)
 import CSV (loadSnapshotDB, ensureCSVFiles)
+import PathUtil ((</>))
 
 -- | Generate bump tests - all files are bumped in one temp directory
 bumpTestsIO :: IO [TestTree]
