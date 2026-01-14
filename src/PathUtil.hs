@@ -73,8 +73,9 @@ collapseDots path = joinPath $ reverse $ foldl collapseDir [] (splitPath path)
 -- Uses forward slash as separator on all platforms
 -- Examples: takeDirectory "a/b/c" = "a/b", takeDirectory "file.txt" = "."
 takeDirectory :: FilePath -> FilePath
+takeDirectory "" = "."
 takeDirectory path =
-  case reverse (splitPath path) of
+  case reverse (filter (not . null) (splitPath path)) of
     [] -> "."
     [_] -> "."
     (_:dirs) -> joinPath (reverse dirs)
@@ -83,7 +84,8 @@ takeDirectory path =
 -- Uses forward slash as separator on all platforms
 -- Examples: takeFileName "a/b/c.txt" = "c.txt", takeFileName "file.txt" = "file.txt"
 takeFileName :: FilePath -> FilePath
+takeFileName "" = ""
 takeFileName path =
-  case reverse (splitPath path) of
+  case reverse (filter (not . null) (splitPath path)) of
     [] -> ""
     (name:_) -> name
