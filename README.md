@@ -39,14 +39,19 @@ inspects the value of the `snapshot:` (or `resolver:`) field and upgrades it in 
 
 These can be modified with the following option(s):
 
-| Option    | Values                  | Description                       |
-|-----------|-------------------------|-----------------------------------|
-| `--color` | `always`,`never`,`auto` | Colored output? (Default: `auto`) |
+| Option        | Values                  | Description                                                        |
+|---------------|-------------------------|--------------------------------------------------------------------|
+| `--color`     | `always`,`never`,`auto` | Colored output? (Default: `auto`)                                  |
+| `--recursive` | (flag)                  | Search for `stack*.yaml` files in all subdirectories (short: `-r`) |
 
 When `--color=auto` is used (the default), colors are disabled
 if the `NO_COLOR` environment variable is set to any value,
 following the standard described at https://no-color.org.
 Colors can still be forced on with `--color=always` even when `NO_COLOR` is set.
+
+**Note:** The `--recursive` flag can only be used with `bump` and `dry-run` commands
+when no explicit FILES are specified. If you provide explicit file arguments,
+you cannot use the `--recursive` flag.
 
 It also has the following inessential commands (standard options) that just give information about itself:
 
@@ -117,6 +122,15 @@ Alternatively, you can specify specific files to bump:
 stacker bump stack-9.6.yaml stack-9.8.yaml
 ```
 
+To search for `stack*.yaml` files recursively in all subdirectories:
+```
+stacker bump --recursive
+```
+or
+```
+stacker bump -r
+```
+
 Only the content of the `snapshot:` and `resolver:` fields will be updated,
 everything else will remain literally the same, including comments and whitespace.
 
@@ -129,6 +143,15 @@ their `snapshot` (which can also be given in the `resolver` field), and what act
 Alternatively, you can specify specific files to check:
 ```
 stacker dry-run stack-9.6.yaml stack-9.8.yaml
+```
+
+To search for `stack*.yaml` files recursively in all subdirectories:
+```
+stacker dry-run --recursive
+```
+or
+```
+stacker dry-run -r
 ```
 
 Example output:
