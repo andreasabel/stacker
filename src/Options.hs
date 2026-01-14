@@ -39,8 +39,8 @@ optionsParser = subcommandWithOptions <|> topLevelOptions
     
     -- Subcommand parser that includes color options for each command
     subcommandWithOptions = subparser
-      ( command "bump" (info (withColorOption bumpParser) (progDesc "Update stack*.yaml files (optionally specify files)"))
-     <> command "dry-run" (info (withColorOption dryRunParser) (progDesc "Show what would be updated (default, optionally specify files)"))
+      ( command "bump" (info (withColorOption bumpParser) (progDesc "Update stack*.yaml files (optionally specify files, or use --recursive/-r to search subdirectories)"))
+     <> command "dry-run" (info (withColorOption dryRunParser) (progDesc "Show what would be updated (default, optionally specify files, or use --recursive/-r to search subdirectories)"))
      <> command "update" (info (withColorOption (pure Update)) (progDesc "Update stackage snapshots database"))
      <> command "info" (info (withColorOption (pure Info)) (progDesc "Print GHC version to snapshot mapping"))
      <> command "config" (info (withColorOption configParser) (progDesc "Configure stacker"))
