@@ -17,7 +17,8 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
-import System.FilePath (takeFileName, takeDirectory, normalise, makeRelative, (</>), splitDirectories, joinPath)
+import System.FilePath (takeFileName, takeDirectory, normalise, makeRelative, splitDirectories, joinPath)
+import PathUtil ((</>), normalizeFilePath)
 import Types (Action(..))
 
 -- | Check if a filename is a stack*.yaml file
@@ -41,20 +42,20 @@ findStackYamlFilesRecursive = findStackYamlFilesInDir "."
 findStackYamlFilesInDir :: FilePath -> IO [FilePath]
 findStackYamlFilesInDir dir = do
   entries <- listDirectory dir
-  -- Use "/" instead of </> to ensure consistent paths across all OSs
-  let fullPaths = map (\entry -> dir ++ "/" ++ entry) entries
+  -- Use custom </> to ensure consistent paths across all OSs
+  let fullPaths = map (dir </>) entries
   
   -- Process files and directories separately
   files <- filterM doesFileExist fullPaths
   dirs <- filterM doesDirectoryExist fullPaths
   
-  -- Find stack*.yaml files in current directory
-  let stackYamls = filter isStackYaml files
+  -- Find stack*.yaml files in current directory, normalize to remove "./" prefix
+  let stackYamls = map normalizeFilePath $ filter isStackYaml files
   
   -- Recursively search subdirectories
   subResults <- mapM findStackYamlFilesInDir dirs
   
-  -- Combine and sort all results
+  -- Combine and sort all results (all paths are already normalized)
   return $ sort (stackYamls ++ concat subResults)
 
 -- | Get a map of symlinks to their targets (only for symlinks pointing to other stack*.yaml files in the list)
@@ -76,17 +77,10 @@ getSymlinkMap files = do
       let targetPath = symlinkDir </> target
       -- Normalize and collapse .. components
       let normalizedTarget = collapseDotDots $ normalise targetPath
-      let relativeTarget = makeRelative "." normalizedTarget
-      -- Try both with and without ./ prefix to match the files list
-      let withPrefix = if "./" `isPrefixOf` relativeTarget
-                       then relativeTarget
-                       else "./" ++ relativeTarget
-      let finalTarget = if withPrefix `elem` files
-                        then withPrefix
-                        else relativeTarget
+      let relativeTarget = normalizeFilePath $ makeRelative "." normalizedTarget
       -- Check if the target is in our file list
-      if finalTarget `elem` files
-        then return $ Just (link, finalTarget)
+      if relativeTarget `elem` files
+        then return $ Just (link, relativeTarget)
         else return Nothing
     
     -- Collapse .. components in a path
