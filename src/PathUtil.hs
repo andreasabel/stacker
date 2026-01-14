@@ -64,4 +64,5 @@ collapseDots path = joinPath $ reverse $ foldl collapseDir [] (splitPath path)
     collapseDir :: [String] -> String -> [String]
     collapseDir acc "." = acc
     collapseDir (prev:rest) ".." | prev /= ".." = rest
+    collapseDir acc ".." = ".." : acc
     collapseDir acc dir = dir : acc
