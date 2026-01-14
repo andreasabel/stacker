@@ -20,7 +20,7 @@ import System.Directory (doesFileExist)
 import Text.Printf (printf)
 
 import Types (Action(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
-import StackYaml (parseStackYaml, findStackYamlFiles, getSymlinkMap)
+import StackYaml (parseStackYaml, findStackYamlFiles, findStackYamlFilesRecursive, getSymlinkMap)
 
 -- | Analyze a single stack.yaml file
 analyzeStackYaml :: SnapshotDB -> Map.Map FilePath FilePath -> FilePath -> IO (Maybe Action)
@@ -35,13 +35,16 @@ analyzeStackYaml db symlinkMap file = do
       Just $ Action file oldSnap newSnap isResolver span symlinkTarget
 
 -- | Analyze specific stack*.yaml files, or all if empty list
-analyzeStackYamls :: SnapshotDB -> [FilePath] -> IO [Action]
-analyzeStackYamls db files = do
+-- If recursive is True, search recursively in all subdirectories
+analyzeStackYamls :: SnapshotDB -> [FilePath] -> Bool -> IO [Action]
+analyzeStackYamls db files recursive = do
   -- Get files to analyze: either auto-discover or use provided list
   -- Non-existent files are silently filtered out
   filesToAnalyze <- 
     if null files 
-      then findStackYamlFiles 
+      then if recursive
+           then findStackYamlFilesRecursive
+           else findStackYamlFiles
       else filterM doesFileExist files
   symlinkMap <- getSymlinkMap filesToAnalyze
   results <- mapM (analyzeStackYaml db symlinkMap) filesToAnalyze
@@ -49,7 +52,7 @@ analyzeStackYamls db files = do
 
 -- | Analyze all stack*.yaml files in the current directory
 analyzeAllStackYamls :: SnapshotDB -> IO [Action]
-analyzeAllStackYamls db = analyzeStackYamls db []
+analyzeAllStackYamls db = analyzeStackYamls db [] False
 
 -- | Determine the new snapshot for a given old snapshot
 determineNewSnapshot :: SnapshotDB -> Text -> Maybe Text

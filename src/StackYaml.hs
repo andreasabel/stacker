@@ -2,6 +2,7 @@
 
 module StackYaml
   ( findStackYamlFiles
+  , findStackYamlFilesRecursive
   , parseStackYaml
   , applyAction
   , isStackYaml
@@ -15,8 +16,8 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
-import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget)
-import System.FilePath (takeFileName, normalise, makeRelative)
+import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
+import System.FilePath (takeFileName, normalise, makeRelative, (</>))
 import Types (Action(..))
 
 -- | Check if a filename is a stack*.yaml file
@@ -31,6 +32,29 @@ findStackYamlFiles = do
   files <- listDirectory "."
   let candidates = filter isStackYaml files
   sort <$> filterM doesFileExist candidates
+
+-- | Find all stack*.yaml files recursively in all subdirectories
+findStackYamlFilesRecursive :: IO [FilePath]
+findStackYamlFilesRecursive = findStackYamlFilesInDir "."
+
+-- | Helper function to find stack*.yaml files recursively in a directory
+findStackYamlFilesInDir :: FilePath -> IO [FilePath]
+findStackYamlFilesInDir dir = do
+  entries <- listDirectory dir
+  let fullPaths = map (dir </>) entries
+  
+  -- Process files and directories separately
+  files <- filterM doesFileExist fullPaths
+  dirs <- filterM doesDirectoryExist fullPaths
+  
+  -- Find stack*.yaml files in current directory
+  let stackYamls = filter isStackYaml files
+  
+  -- Recursively search subdirectories
+  subResults <- mapM findStackYamlFilesInDir dirs
+  
+  -- Combine and sort all results
+  return $ sort (stackYamls ++ concat subResults)
 
 -- | Get a map of symlinks to their targets (only for symlinks pointing to other stack*.yaml files in the list)
 getSymlinkMap :: [FilePath] -> IO (Map.Map FilePath FilePath)

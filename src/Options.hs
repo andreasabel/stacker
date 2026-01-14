@@ -61,7 +61,7 @@ optionsParser = subcommandWithOptions <|> topLevelOptions
       <|> flag' NumericVersion (long "numeric-version" <> help "Print version number")
       <|> flag' PrintLicense (long "license" <> help "Print license text")
       <|> flag' Help (long "help" <> short 'h' <> help "Print help")
-      <|> pure (DryRun [])
+      <|> pure (DryRun [] False)
 
 -- | Config command parser
 configParser :: Parser Command
@@ -73,9 +73,18 @@ configParser = Config <$> subparser
 repoParser :: Parser ConfigCmd
 repoParser = SetRepo <$> argument str (metavar "PATH")
 
--- | Helper to parse file arguments
-filesParser :: ([FilePath] -> Command) -> Parser Command
-filesParser cmd = cmd <$> many (argument str (metavar "FILES..." <> action "file"))
+-- | Helper to parse file arguments with optional recursive flag
+filesParser :: ([FilePath] -> Bool -> Command) -> Parser Command
+filesParser cmd = cmd 
+  <$> many (argument str (metavar "FILES..." <> action "file"))
+  <*> recursiveOption
+
+-- | Recursive option parser
+recursiveOption :: Parser Bool
+recursiveOption = switch
+  ( long "recursive"
+ <> short 'r'
+ <> help "Search for stack*.yaml files recursively in all subdirectories" )
 
 -- | Bump command parser
 bumpParser :: Parser Command

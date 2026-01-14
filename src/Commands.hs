@@ -43,7 +43,9 @@ runCommand opts = do
       putStrLn ""
       putStrLn "Available commands:"
       putStrLn "  bump [FILES...]          Update FILES (or all stack*.yaml files in current directory if none specified)"
+      putStrLn "                           Use --recursive/-r to search subdirectories"
       putStrLn "  dry-run [FILES...]       Show what would be updated by 'bump' (default)"
+      putStrLn "                           Use --recursive/-r to search subdirectories"
       putStrLn "  update                   Update stackage snapshots database"
       putStrLn "  info                     Print GHC version to snapshot mapping"
       putStrLn "  config                   Configure stacker"
@@ -74,8 +76,8 @@ runEssentialCommand useColor cmd = do
   ensureCSVFiles
 
   case cmd of
-    DryRun files -> runDryRun useColor files
-    Bump files -> runBump files
+    DryRun files recursive -> runDryRun useColor files recursive
+    Bump files recursive -> runBump files recursive
     Update -> do
       -- Only for Update command, ensure repo exists and update it
       repoPath <- getRepoPath
@@ -101,10 +103,14 @@ withColor useColor sgr action = do
   when useColor $ setSGR [Reset]
 
 -- | Run dry-run command
-runDryRun :: Bool -> [FilePath] -> IO ()
-runDryRun useColor files = do
+runDryRun :: Bool -> [FilePath] -> Bool -> IO ()
+runDryRun useColor files recursive = do
+  -- Validate: recursive cannot be used with explicit files
+  when (recursive && not (null files)) $ do
+    error "Error: --recursive cannot be used with explicit file arguments"
+  
   db <- loadSnapshotDB
-  actions <- analyzeStackYamls db files
+  actions <- analyzeStackYamls db files recursive
 
   -- Sort actions by filename
   let sortedActions = sortBy (comparing actionFile) actions
@@ -149,10 +155,14 @@ padRight :: Int -> String -> String
 padRight n s = take n (s ++ repeat ' ')
 
 -- | Run bump command
-runBump :: [FilePath] -> IO ()
-runBump files = do
+runBump :: [FilePath] -> Bool -> IO ()
+runBump files recursive = do
+  -- Validate: recursive cannot be used with explicit files
+  when (recursive && not (null files)) $ do
+    error "Error: --recursive cannot be used with explicit file arguments"
+  
   db <- loadSnapshotDB
-  actions <- analyzeStackYamls db files
+  actions <- analyzeStackYamls db files recursive
   mapM_ (applyAction True) actions
 
 -- | Run update command

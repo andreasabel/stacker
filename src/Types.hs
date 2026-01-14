@@ -58,8 +58,8 @@ data AppConfig = AppConfig
 
 -- | Command-line command
 data Command
-  = Bump [FilePath]  -- Optional list of files to bump
-  | DryRun [FilePath]  -- Optional list of files to check
+  = Bump [FilePath] Bool  -- Optional list of files to bump, recursive flag
+  | DryRun [FilePath] Bool  -- Optional list of files to check, recursive flag
   | Config ConfigCmd
   | Update
   | Info
