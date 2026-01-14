@@ -12,6 +12,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import System.Console.ANSI
 import System.Directory (makeAbsolute)
+import System.Exit (die)
 import Text.Printf (printf)
 import Types
 import Config
@@ -106,8 +107,8 @@ withColor useColor sgr action = do
 runDryRun :: Bool -> [FilePath] -> Bool -> IO ()
 runDryRun useColor files recursive = do
   -- Validate: recursive cannot be used with explicit files
-  when (recursive && not (null files)) $ do
-    error "Error: --recursive cannot be used with explicit file arguments"
+  when (recursive && not (null files)) $
+    die "Error: --recursive cannot be used with explicit file arguments"
   
   db <- loadSnapshotDB
   actions <- analyzeStackYamls db files recursive
@@ -115,10 +116,10 @@ runDryRun useColor files recursive = do
   -- Sort actions by filename
   let sortedActions = sortBy (comparing actionFile) actions
   
-  -- Calculate the maximum filename length for proper alignment
+  -- Calculate the maximum filename length for proper alignment (add 2 for padding)
   let maxFileLen = if null sortedActions 
                    then 20 
-                   else max 20 (maximum (map (length . actionFile) sortedActions))
+                   else max 20 (maximum (map (length . actionFile) sortedActions) + 2)
 
   forM_ sortedActions $ \action -> do
     printActionWithWidth useColor maxFileLen action
@@ -163,8 +164,8 @@ padRight n s = take n (s ++ repeat ' ')
 runBump :: [FilePath] -> Bool -> IO ()
 runBump files recursive = do
   -- Validate: recursive cannot be used with explicit files
-  when (recursive && not (null files)) $ do
-    error "Error: --recursive cannot be used with explicit file arguments"
+  when (recursive && not (null files)) $
+    die "Error: --recursive cannot be used with explicit file arguments"
   
   db <- loadSnapshotDB
   actions <- analyzeStackYamls db files recursive

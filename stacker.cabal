@@ -31,7 +31,10 @@ extra-source-files:
   test/golden/dry-run-files.golden
   test/golden/dry-run-recursive.golden
   test/golden/tests/*.yaml
-  test/recursive/**/*.yaml
+  test/recursive/stack-9.6.yaml
+  test/recursive/subdir1/stack-9.8.yaml
+  test/recursive/subdir1/subdir2/stack-9.10.yaml
+  test/recursive/other/stack.yaml
 
 data-dir:
   data

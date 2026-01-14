@@ -1,4 +1,4 @@
-./other/stack.yaml               lts-24.20                → bump to lts-24.28
-./stack-9.6.yaml                 lts-22.40                → bump to lts-22.44
-./subdir1/stack-9.8.yaml         lts-23.20                → bump to lts-23.28
-./subdir1/subdir2/stack-9.10.yamlnightly-2025-01-01       → bump to lts-24.28
+./other/stack.yaml                 lts-24.20                → bump to lts-24.28
+./stack-9.6.yaml                   lts-22.40                → bump to lts-22.44
+./subdir1/stack-9.8.yaml           lts-23.20                → bump to lts-23.28
+./subdir1/subdir2/stack-9.10.yaml  nightly-2025-01-01       → bump to lts-24.28
