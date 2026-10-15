@@ -61,7 +61,7 @@ Updating stack-9.12.yaml
 | `dry-run [FILES...]` | Shows what updates would be performed by the respective `bump` (default command) |
 | `config`             | Configures `stacker`                                                             |
 | `update`             | Updates its database of Stackage snapshots                                       |
-| `info`               | Prints table mapping GHC major versions to their latest snapshots                |
+| `info [repo\|snapshots]` | Prints repository path and/or table mapping GHC major versions to their latest snapshots |
 
 These can be modified with the following option(s):
 
@@ -254,6 +254,14 @@ The `update` command then regenerates then three files `lts.csv`, `nightly.csv` 
      9.10.3: lts-24.36
      9.12.4: nightly-2026-04-01
    ```
+
+These can also be printed separately:
+- `stacker info repo` prints just the bare path `$REPO`.
+- `stacker info snapshots` prints just the map, without indentation, e.g.
+  ```
+  9.8.4: lts-23.28
+  9.10.3: lts-24.36
+  ```
 
 ## Testing
 

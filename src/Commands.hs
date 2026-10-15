@@ -48,7 +48,7 @@ runCommand opts = do
       putStrLn "  dry-run [FILES...]       Show what would be updated by 'bump' (default)"
       putStrLn "                           Use --recursive/-r to search subdirectories"
       putStrLn "  update                   Update stackage snapshots database"
-      putStrLn "  info                     Print GHC version to snapshot mapping"
+      putStrLn "  info [repo|snapshots]    Print repository path and/or GHC version to snapshot mapping"
       putStrLn "  config                   Configure stacker"
       putStrLn ""
       putStrLn "Available options:"
@@ -70,6 +70,7 @@ runCommand opts = do
       putStrLn ""
       putStrLn "For more information, see the README"
     Config configCmd -> runConfig configCmd  -- Handle config first!
+    Info InfoRepo -> getRepoPath >>= putStrLn  -- Does not need CSV files
     cmd -> runEssentialCommand useColor cmd
 
 -- | Run an essential command (requires CSV files)
@@ -86,10 +87,7 @@ runEssentialCommand useColor cmd = do
       repoPath <- getRepoPath
       ensureRepo repoPath
       runUpdate repoPath
-    Info -> do
-      -- Info command shows the repo path
-      repoPath <- getRepoPath
-      runInfo repoPath
+    Info infoCmd -> runInfo infoCmd
     _ -> return ()
 
 -- | Print version information
@@ -184,15 +182,20 @@ runUpdate repoPath = do
   generateCSVs repoPath
 
 -- | Run info command
-runInfo :: FilePath -> IO ()
-runInfo repoPath = do
-  putStrLn $ "repo: " ++ repoPath
-  db <- loadSnapshotDB
-  putStrLn "snapshots:"
-
-  let ghcEntries = Map.toAscList (dbGHC db)
-  forM_ ghcEntries $ \(ghc, snapshot) -> do
-    putStrLn $ "  " ++ formatGHCVersionText ghc ++ ": " ++ T.unpack (formatSnapshotText snapshot)
+runInfo :: InfoCmd -> IO ()
+runInfo = \case
+  InfoAll -> do
+    repoPath <- getRepoPath
+    putStrLn $ "repo: " ++ repoPath
+    putStrLn "snapshots:"
+    printSnapshots "  "
+  InfoRepo -> getRepoPath >>= putStrLn
+  InfoSnapshots -> printSnapshots ""
+  where
+    printSnapshots indent = do
+      db <- loadSnapshotDB
+      forM_ (Map.toAscList (dbGHC db)) $ \(ghc, snapshot) ->
+        putStrLn $ indent ++ formatGHCVersionText ghc ++ ": " ++ T.unpack (formatSnapshotText snapshot)
 
 -- | Format GHC version as text
 formatGHCVersionText :: GHCVersion -> String

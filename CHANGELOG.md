@@ -8,6 +8,9 @@ Unreleased
   instead of `✓ up to date`.  This includes snapshots newer than the database
   (previously a downgrade could be suggested), unknown LTS major versions,
   and resolvers that are not Stackage snapshots.
+* New subcommands `stacker info repo` and `stacker info snapshots`
+  that print just the repository path and just the snapshot list, respectively.
+* Shipped snapshot database updated (latest: lts-24.63, nightly-2026-10-12).
 
 0.0.0.0
 =======

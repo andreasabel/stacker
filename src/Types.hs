@@ -69,11 +69,18 @@ data Command
   | DryRun [FilePath] Bool  -- Optional list of files to check, recursive flag
   | Config ConfigCmd
   | Update
-  | Info
+  | Info InfoCmd
   | Version
   | NumericVersion
   | PrintLicense
   | Help
+  deriving (Eq, Show)
+
+-- | Info command
+data InfoCmd
+  = InfoAll        -- ^ Print repo path and snapshots (in YAML format)
+  | InfoRepo       -- ^ Print just the repo path
+  | InfoSnapshots  -- ^ Print just the GHC version to snapshot mapping
   deriving (Eq, Show)
 
 -- | Config command

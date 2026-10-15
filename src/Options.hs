@@ -42,7 +42,7 @@ optionsParser = subcommandWithOptions <|> topLevelOptions
       ( command "bump" (info (withColorOption bumpParser) (progDesc "Update stack*.yaml files (optionally specify files, or use --recursive/-r to search subdirectories)"))
      <> command "dry-run" (info (withColorOption dryRunParser) (progDesc "Show what would be updated (default, optionally specify files, or use --recursive/-r to search subdirectories)"))
      <> command "update" (info (withColorOption (pure Update)) (progDesc "Update stackage snapshots database"))
-     <> command "info" (info (withColorOption (pure Info)) (progDesc "Print GHC version to snapshot mapping"))
+     <> command "info" (info (withColorOption infoCmdParser) (progDesc "Print repository path and GHC version to snapshot mapping"))
      <> command "config" (info (withColorOption configParser) (progDesc "Configure stacker"))
      <> command "version" (info (withColorOption (pure Version)) (progDesc "Print version information (also: -V, --version)"))
      <> command "numeric-version" (info (withColorOption (pure NumericVersion)) (progDesc "Print version number (also: --numeric-version)"))
@@ -68,6 +68,13 @@ configParser :: Parser Command
 configParser = Config <$> subparser
   ( command "repo" (info repoParser (progDesc "Set repository path"))
   )
+
+-- | Info command parser
+infoCmdParser :: Parser Command
+infoCmdParser = Info <$> (subparser
+  ( command "repo" (info (pure InfoRepo) (progDesc "Print repository path"))
+ <> command "snapshots" (info (pure InfoSnapshots) (progDesc "Print GHC version to snapshot mapping"))
+  ) <|> pure InfoAll)
 
 -- | Repo config parser
 repoParser :: Parser ConfigCmd
