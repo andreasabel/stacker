@@ -14,7 +14,7 @@ jobs:
   generate-matrix:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: freckle/stack-action/generate-matrix@v5
         id: generate
     outputs:
@@ -24,13 +24,13 @@ jobs:
     needs: generate-matrix
     strategy:
       matrix:
-        stack-yaml: [stack-9.4.yaml,stack-9.12.yaml]
+        stack-yaml: [stack-9.4.yaml,stack-9.14.yaml]
           # ${{ fromJSON(needs.generate-matrix.outputs.stack-yamls) }}
       fail-fast: false
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: freckle/stack-action@v5
         with:
           stack-arguments: --stack-yaml ${{ matrix.stack-yaml }}
@@ -39,7 +39,7 @@ jobs:
   macOS:
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: freckle/stack-action@v5
         with:
           cache-save-always: true
@@ -47,7 +47,7 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: freckle/stack-action@v5
         with:
           cache-save-always: true
