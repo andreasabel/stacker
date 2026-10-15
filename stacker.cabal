@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               stacker
-version:            0.0.0.0
+version:            0.0.1.0
 synopsis:           Bump snapshots in stack.yaml files
 description:
   A tool to bump snapshots (resolvers) in stack*.yaml files.
@@ -19,6 +19,7 @@ tested-with:
   GHC == 9.8.4
   GHC == 9.10.3
   GHC == 9.12.4
+  GHC == 9.14.1
 
 extra-doc-files:
   CHANGELOG.md
