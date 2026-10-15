@@ -4,22 +4,24 @@ module Analysis
   ( analyzeStackYaml
   , analyzeAllStackYamls
   , analyzeStackYamls
+  , determineNewSnapshot
   ) where
 
 import Prelude hiding (min, span)
 
+import Control.Applicative ((<|>))
 import Control.Monad (filterM)
 import Data.Functor ((<&>))
 import Data.List (maximumBy)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Ord (comparing)
 import Data.Text (Text)
 import Data.Text qualified as T
 import System.Directory (doesFileExist)
 import Text.Printf (printf)
 
-import Types (Action(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
+import Types (Action(..), Bump(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
 import StackYaml (parseStackYaml, findStackYamlFiles, findStackYamlFilesRecursive, getSymlinkMap)
 
 -- | Analyze a single stack.yaml file
@@ -55,14 +57,23 @@ analyzeAllStackYamls :: SnapshotDB -> IO [Action]
 analyzeAllStackYamls db = analyzeStackYamls db [] False
 
 -- | Determine the new snapshot for a given old snapshot
-determineNewSnapshot :: SnapshotDB -> Text -> Maybe Text
+determineNewSnapshot :: SnapshotDB -> Text -> Bump
 determineNewSnapshot db oldSnap
-  | T.isPrefixOf "lts-" oldSnap = determineLTSBump db oldSnap
-  | T.isPrefixOf "nightly-" oldSnap = determineNightlyBump db oldSnap
-  | otherwise = Nothing
+  | T.isPrefixOf "lts-" oldSnap = fromMaybe Unknown $ determineLTSBump db oldSnap
+  | T.isPrefixOf "nightly-" oldSnap = fromMaybe Unknown $ determineNightlyBump db oldSnap
+  | otherwise = Unknown
+
+-- | Compare the latest known snapshot with the old one.
+-- If the old snapshot is newer than anything we know of,
+-- our database is outdated and we cannot give advice.
+compareWithLatest :: Ord a => a -> a -> Snapshot -> Bump
+compareWithLatest old latest snap = case compare latest old of
+  GT -> BumpTo (formatSnapshot snap)
+  EQ -> UpToDate
+  LT -> Unknown
 
 -- | Determine bump for LTS snapshot
-determineLTSBump :: SnapshotDB -> Text -> Maybe Text
+determineLTSBump :: SnapshotDB -> Text -> Maybe Bump
 determineLTSBump db oldSnap = do
   oldVersion <- parseLTSSnapshot oldSnap
   -- Find the latest LTS with the same major version
@@ -71,16 +82,16 @@ determineLTSBump db oldSnap = do
     then Nothing
     else do
       let (latestVersion, _) = maximumBy (comparing fst) sameMajor
-      let newSnap = formatSnapshot (LTS latestVersion)
-      if newSnap == oldSnap
-        then Nothing  -- Already up to date
-        else Just newSnap
+      return $ compareWithLatest oldVersion latestVersion (LTS latestVersion)
 
 -- | Determine bump for nightly snapshot
-determineNightlyBump :: SnapshotDB -> Text -> Maybe Text
+determineNightlyBump :: SnapshotDB -> Text -> Maybe Bump
 determineNightlyBump db oldSnap = do
   oldVersion <- parseNightlySnapshot oldSnap
-  oldGHC <- Map.lookup oldVersion (dbNightly db)
+  -- The exact nightly may be missing from the database
+  -- (e.g. a date for which no nightly was published);
+  -- then take the GHC version of the closest known neighbour.
+  (_, oldGHC) <- Map.lookupLE oldVersion (dbNightly db) <|> Map.lookupGE oldVersion (dbNightly db)
   -- Get GHC major version (e.g., (9,6) from GHCVersion 9 6 1)
   let ghcMajor = getGHCMajor oldGHC
   -- Find if there's an LTS for this GHC major version
@@ -89,7 +100,7 @@ determineNightlyBump db oldSnap = do
     then do
       -- Bump to latest LTS for this GHC major
       let (latestLTS, _) = maximumBy (comparing fst) ltsForGHC
-      return $ formatSnapshot (LTS latestLTS)
+      return $ BumpTo $ formatSnapshot (LTS latestLTS)
     else do
       -- Bump to latest nightly for this GHC major
       let nightliesForGHC = filter (\(_, ghc) -> getGHCMajor ghc == ghcMajor) $ Map.toList (dbNightly db)
@@ -97,10 +108,7 @@ determineNightlyBump db oldSnap = do
         then Nothing
         else do
           let (latestNightly, _) = maximumBy (comparing fst) nightliesForGHC
-          let newSnap = formatSnapshot (Nightly latestNightly)
-          if newSnap == oldSnap
-            then Nothing
-            else Just newSnap
+          return $ compareWithLatest oldVersion latestNightly (Nightly latestNightly)
 
 -- | Get GHC major version from full version (e.g., (9,6) from GHCVersion 9 6 1)
 getGHCMajor :: GHCVersion -> (Int, Int)

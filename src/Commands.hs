@@ -131,7 +131,7 @@ printActionWithWidth :: Bool -> Int -> Action -> IO ()
 printActionWithWidth useColor fileWidth action = do
   let file = actionFile action
   let oldSnap = actionOldSnapshot action
-  let newSnap = actionNewSnapshot action
+  let bump = actionBump action
   let symlinkTarget = actionSymlinkTarget action
 
   -- Print with proper alignment (file padded to fileWidth chars, oldSnap to 25 chars)
@@ -147,11 +147,14 @@ printActionWithWidth useColor fileWidth action = do
         putStr "= symlink to "
         putStr target
     Nothing ->
-      case newSnap of
-        Nothing -> do
+      case bump of
+        UpToDate -> do
           withColor useColor [SetColor Foreground Vivid Green] $
             putStr "✓ up to date"
-        Just new -> do
+        Unknown -> do
+          withColor useColor [SetColor Foreground Vivid Red] $
+            putStr "? unknown snapshot"
+        BumpTo new -> do
           withColor useColor [SetColor Foreground Vivid Yellow] $ do
             putStr "→ bump to "
             putStr $ T.unpack new

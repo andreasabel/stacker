@@ -34,11 +34,18 @@ data Snapshot
   | Nightly NightlyVersion
   deriving (Eq, Ord, Show, Generic)
 
+-- | Outcome of analyzing a snapshot
+data Bump
+  = UpToDate      -- ^ Already the latest snapshot for its GHC major version
+  | BumpTo Text   -- ^ Should be bumped to this snapshot
+  | Unknown       -- ^ Snapshot not recognized (e.g. not in the database)
+  deriving (Eq, Show, Generic)
+
 -- | Action to take for a stack*.yaml file
 data Action = Action
   { actionFile :: FilePath
   , actionOldSnapshot :: Text
-  , actionNewSnapshot :: Maybe Text
+  , actionBump :: Bump
   , actionIsResolver :: Bool  -- True if 'resolver' field, False if 'snapshot'
   , actionSpan :: (Int, Int)  -- Character span to replace
   , actionSymlinkTarget :: Maybe FilePath  -- Just target if this is a symlink to another stack*.yaml in the list

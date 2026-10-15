@@ -18,7 +18,7 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
 import PathUtil ((</>), normalizeFilePath, collapseDots, takeDirectory, takeFileName, toForwardSlashes)
-import Types (Action(..))
+import Types (Action(..), Bump(..))
 
 -- | Check if a filename is a stack*.yaml file
 isStackYaml :: FilePath -> Bool
@@ -122,9 +122,10 @@ applyAction verbose action = do
   case actionSymlinkTarget action of
     Just _ -> return ()  -- Skip symlinks
     Nothing ->
-      case actionNewSnapshot action of
-        Nothing -> return ()  -- No update needed
-        Just newSnap -> do
+      case actionBump action of
+        UpToDate -> return ()
+        Unknown -> return ()
+        BumpTo newSnap -> do
           when verbose $ putStrLn $ "Updating " ++ actionFile action
           content <- TIO.readFile (actionFile action)
           let (before, after) = splitAtSpan (actionSpan action) content

@@ -189,7 +189,7 @@ stack-9.8.yaml    lts-23.1             → bump to lts-23.28
 stack-9.10.yaml   nightly-2024-07-07   → bump to lts-24.36
 stack-9.12.yaml   nightly-2025-10-03   → bump to nightly-2026-04-01
 ```
-When coloring is on, the `stack*.yml` column is printed in bold, `✓ up to date` in green and any bump action in bright yellow.
+When coloring is on, the `stack*.yml` column is printed in bold, `✓ up to date` in green, any bump action in bright yellow, and `? unknown snapshot` in red.
 
 Internally, `bump` and `dry-run` share the analysis phase that reads the `stack*.yaml` and creates for each an action plan,
 yet `dry-run` just pretty-prints this plan as detailed above whereas `bump` executes it.
