@@ -9,7 +9,8 @@ module CSV
 import Prelude hiding (lines, min)
 
 import Control.Monad (unless)
-import Data.List (sortBy, sortOn)
+import Data.ByteString.Char8 qualified as BS
+import Data.List (find, sortBy, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Ord (comparing)
@@ -25,7 +26,7 @@ import Data.Aeson qualified as Aeson
 import Text.Printf (printf)
 import Types (LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..), SnapshotDB(..))
 import XDG (getStateDir)
-import System.IO (stderr)
+import System.IO (IOMode(ReadMode), SeekMode(AbsoluteSeek), hFileSize, hSeek, stderr, withBinaryFile)
 import Paths_stacker (getDataDir)
 import System.Directory qualified as Dir
 
@@ -83,7 +84,7 @@ generateCSVs repoPath = do
   stateDir <- getStateDir
   createDirectoryIfMissing True stateDir
 
-  TIO.hPutStrLn stderr $ "Processing snapshot database.  This might take a couple of minutes..."
+  TIO.hPutStrLn stderr $ "Processing snapshot database..."
 
   -- Process LTS snapshots
   TIO.hPutStrLn stderr $ "Processing LTSs..."
@@ -165,9 +166,46 @@ processNightlySnapshots nightlyDir = do
       | otherwise = error $ "Unexpected file in nightly directory: " ++ fname ++
                            " (expected .yaml extension)"
 
--- | Extract GHC version from a snapshot YAML file
+-- | Extract GHC version from a snapshot YAML file.
+-- Tries the fast method first, falling back to (slow) full YAML parsing with a warning.
 extractGHCVersion :: FilePath -> IO GHCVersion
 extractGHCVersion file = do
+  fast <- extractGHCVersionFast file
+  case fast of
+    Just ghc -> return ghc
+    Nothing -> do
+      TIO.hPutStrLn stderr $ "Warning: could not find compiler field at the end of " <> T.pack file
+        <> ", falling back to slow YAML parsing"
+      extractGHCVersionYaml file
+
+-- | Number of bytes at the end of a snapshot file to search for the compiler field
+tailSize :: Integer
+tailSize = 4096
+
+-- | Extract GHC version by searching the end of a snapshot YAML file for the compiler field.
+-- This avoids parsing the whole (large) file.  The compiler field is the last entry,
+-- either at top level (old format) or under @resolver:@ (new format):
+--
+-- > compiler: ghc-7.8.3
+--
+-- > resolver:
+-- >   compiler: ghc-9.12.4
+extractGHCVersionFast :: FilePath -> IO (Maybe GHCVersion)
+extractGHCVersionFast file = do
+  chunk <- withBinaryFile file ReadMode $ \h -> do
+    size <- hFileSize h
+    hSeek h AbsoluteSeek (max 0 (size - tailSize))
+    BS.hGetContents h
+  return $ do
+    line <- find isCompilerLine $ reverse $ BS.lines chunk
+    parseGHCVersionText $ T.pack $ BS.unpack $ BS.strip $ BS.drop (BS.length prefix) $ BS.dropWhile (== ' ') line
+  where
+    prefix = "compiler: ghc-"
+    isCompilerLine l = any (`BS.isPrefixOf` l) [prefix, "  " <> prefix]
+
+-- | Extract GHC version from a snapshot YAML file by full YAML parsing
+extractGHCVersionYaml :: FilePath -> IO GHCVersion
+extractGHCVersionYaml file = do
   result <- Yaml.decodeFileEither file
   case result of
     Left err -> error $ "Failed to parse " ++ file ++ ": " ++ show err

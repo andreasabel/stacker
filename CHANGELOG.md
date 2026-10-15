@@ -11,6 +11,9 @@ Unreleased
 * New subcommands `stacker info repo` and `stacker info snapshots`
   that print just the repository path and just the snapshot list, respectively.
 * Shipped snapshot database updated (latest: lts-24.63, nightly-2026-10-12).
+* `stacker update` is much faster (seconds instead of minutes): the GHC version
+  is now read from the end of each snapshot file instead of parsing the whole YAML.
+  If this fails for a file, a warning is printed and full YAML parsing is used.
 
 0.0.0.0
 =======
