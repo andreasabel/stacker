@@ -111,13 +111,13 @@ runDryRun useColor files recursive = do
   -- Validate: recursive cannot be used with explicit files
   when (recursive && not (null files)) $
     die "Error: --recursive cannot be used with explicit file arguments"
-  
+
   db <- loadSnapshotDB
   actions <- analyzeStackYamls db files recursive
 
   -- Sort actions by filename
   let sortedActions = sortBy (comparing actionFile) actions
-  
+
   -- Calculate the maximum filename length for proper alignment (add 2 for padding)
   let maxFileLen = case sortedActions of
         [] -> 20
@@ -168,7 +168,7 @@ runBump files recursive = do
   -- Validate: recursive cannot be used with explicit files
   when (recursive && not (null files)) $
     die "Error: --recursive cannot be used with explicit file arguments"
-  
+
   db <- loadSnapshotDB
   actions <- analyzeStackYamls db files recursive
   mapM_ (applyAction True) actions

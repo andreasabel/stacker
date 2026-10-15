@@ -43,17 +43,17 @@ findStackYamlFilesInDir dir = do
   entries <- listDirectory dir
   -- Use custom </> to ensure consistent path output with "/" separator on all platforms
   let fullPaths = map (dir </>) entries
-  
+
   -- Process files and directories separately
   files <- filterM doesFileExist fullPaths
   dirs <- filterM doesDirectoryExist fullPaths
-  
+
   -- Find stack*.yaml files in current directory, normalize to remove "./" prefix
   let stackYamls = map normalizeFilePath $ filter isStackYaml files
-  
+
   -- Recursively search subdirectories
   subResults <- mapM findStackYamlFilesInDir dirs
-  
+
   -- Combine and sort all results (all paths are already normalized)
   return $ sort (stackYamls ++ concat subResults)
 

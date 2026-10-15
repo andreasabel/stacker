@@ -36,7 +36,7 @@ optionsParser = subcommandWithOptions <|> topLevelOptions
     -- Helper to combine a command parser with the color option, creating an Options value
     withColorOption :: Parser Command -> Parser Options
     withColorOption cmdParser = Options <$> cmdParser <*> colorOption
-    
+
     -- Subcommand parser that includes color options for each command
     subcommandWithOptions = subparser
       ( command "bump" (info (withColorOption bumpParser) (progDesc "Update stack*.yaml files (optionally specify files, or use --recursive/-r to search subdirectories)"))
@@ -49,14 +49,14 @@ optionsParser = subcommandWithOptions <|> topLevelOptions
      <> command "license" (info (withColorOption (pure PrintLicense)) (progDesc "Print license text (also: --license)"))
      <> command "help" (info (withColorOption (pure Help)) (progDesc "Print this help (also: -h, --help)"))
       )
-    
+
     -- Top-level parser for version/help flags and default command when no subcommand is specified
     topLevelOptions = Options
       <$> commandParserTopLevel
       <*> colorOption
-    
+
     -- Top-level command parser (for flags)
-    commandParserTopLevel = 
+    commandParserTopLevel =
       flag' Version (long "version" <> short 'V' <> help "Print version information")
       <|> flag' NumericVersion (long "numeric-version" <> help "Print version number")
       <|> flag' PrintLicense (long "license" <> help "Print license text")
@@ -75,7 +75,7 @@ repoParser = SetRepo <$> argument str (metavar "PATH")
 
 -- | Helper to parse file arguments with optional recursive flag
 filesParser :: ([FilePath] -> Bool -> Command) -> Parser Command
-filesParser cmd = cmd 
+filesParser cmd = cmd
   <$> many (argument str (metavar "FILES..." <> action "file"))
   <*> recursiveOption
 

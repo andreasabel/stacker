@@ -40,8 +40,8 @@ analyzeStackYamls :: SnapshotDB -> [FilePath] -> Bool -> IO [Action]
 analyzeStackYamls db files recursive = do
   -- Get files to analyze: either auto-discover or use provided list
   -- Non-existent files are silently filtered out
-  filesToAnalyze <- 
-    if null files 
+  filesToAnalyze <-
+    if null files
       then if recursive
            then findStackYamlFilesRecursive
            else findStackYamlFiles

@@ -1,6 +1,6 @@
 -- | Path utilities for cross-platform compatibility
--- 
--- This module provides path utilities that use forward slash (/) as the 
+--
+-- This module provides path utilities that use forward slash (/) as the
 -- path separator on all platforms, including Windows. While Windows primarily
 -- uses backslash (\), it also accepts forward slash for relative paths,
 -- which is what this tool deals with.
