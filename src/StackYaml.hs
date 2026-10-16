@@ -4,13 +4,14 @@ module StackYaml
   ( findStackYamlFiles
   , findStackYamlFilesRecursive
   , parseStackYaml
+  , findSnapshot
   , applyAction
   , isStackYaml
   , getSymlinkMap
   ) where
 
 import Control.Monad (filterM, when)
-import Data.List (isPrefixOf, isSuffixOf, sort)
+import Data.List (dropWhileEnd, isPrefixOf, isSuffixOf, sort)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
@@ -85,35 +86,60 @@ getSymlinkMap files = do
 
 -- | Parse a stack.yaml file to extract the snapshot field
 parseStackYaml :: FilePath -> IO (Maybe (Text, Bool, (Int, Int)))
-parseStackYaml file = do
-  content <- TIO.readFile file
-  return $ findSnapshot (T.unpack content) 0
+parseStackYaml file = findSnapshot <$> TIO.readFile file
+
+-- | Find the snapshot (or, failing that, resolver) field in the contents
+--   of a stack.yaml file.
+--   Returns the value, whether it is a @resolver@ field,
+--   and the character span of the value.
+--
+--   Only top-level keys are considered, i.e., the field name has to start
+--   at the beginning of a line.  Thus, commented-out fields like
+--   @# snapshot: lts-22.0@ and nested keys are ignored.
+--   A trailing comment is not part of the value.
+findSnapshot :: Text -> Maybe (Text, Bool, (Int, Int))
+findSnapshot content =
+  case findField "snapshot:" of
+    Just (value, start, end) -> Just (T.pack value, False, (start, end))
+    Nothing ->
+      case findField "resolver:" of
+        Just (value, start, end) -> Just (T.pack value, True, (start, end))
+        Nothing -> Nothing
   where
-    findSnapshot s pos =
-      case findField "snapshot:" s pos of
-        Just (value, start, end) -> Just (T.pack value, False, (start, end))
-        Nothing ->
-          case findField "resolver:" s pos of
-            Just (value, start, end) -> Just (T.pack value, True, (start, end))
-            Nothing -> Nothing
+    s = T.unpack content
 
-    findField :: String -> String -> Int -> Maybe (String, Int, Int)
-    findField field s pos =
-      findFieldHelper field s pos s
+    findField :: String -> Maybe (String, Int, Int)
+    findField field = go s 0
+      where
+        -- Invariant: @l@ is the rest of the input, starting at the beginning
+        -- of a line at character offset @pos@.
+        go [] _ = Nothing
+        go l pos
+          | field `isPrefixOf` l
+          , let afterField = drop (length field) l
+                trimmed = dropWhile isBlank afterField
+                value = stripComment $ takeWhile (`notElem` ("\n\r" :: String)) trimmed
+          , not (null value)
+          = let valueStart = pos + length field + (length afterField - length trimmed)
+            in  Just (value, valueStart, valueStart + length value)
+          | otherwise =
+              let (line, rest) = break (== '\n') l
+              in  case rest of
+                    []      -> Nothing
+                    _ : l'  -> go l' (pos + length line + 1)
 
-    findFieldHelper :: String -> String -> Int -> String -> Maybe (String, Int, Int)
-    findFieldHelper _field _orig _pos [] = Nothing
-    findFieldHelper field orig pos s@(_:cs)
-      | field `isPrefixOf` s =
-          let afterField = drop (length field) s
-              trimmed = dropWhile (\c -> c `elem` (" \t" :: String)) afterField
-              value = takeWhile (`notElem` ("\n\r" :: String)) trimmed
-              valueStart = pos + (length orig - length s) + length field + (length afterField - length trimmed)
-              valueEnd = valueStart + length value
-          in if null value
-               then Nothing
-               else Just (value, valueStart, valueEnd)
-      | otherwise = findFieldHelper field orig pos cs
+    isBlank :: Char -> Bool
+    isBlank c = c == ' ' || c == '\t'
+
+    -- Remove a trailing comment.  In YAML, a comment starts with @#@
+    -- at the beginning or after whitespace.
+    stripComment :: String -> String
+    stripComment ('#' : _) = []
+    stripComment v         = dropWhileEnd isBlank $ cut v
+      where
+        cut (c : '#' : _) | isBlank c = []
+        cut (c : cs) = c : cut cs
+        cut [] = []
 
 -- | Apply an action to update a stack.yaml file
 applyAction :: Bool -> Action -> IO ()
