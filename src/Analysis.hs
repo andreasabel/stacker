@@ -21,8 +21,8 @@ import Data.Text qualified as T
 import System.Directory (doesFileExist)
 import Text.Printf (printf)
 
-import Types (Action(..), Bump(..), SnapshotDB(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
-import StackYaml (parseStackYaml, findStackYamlFiles, findStackYamlFilesRecursive, getSymlinkMap)
+import Types (Action(..), Bump(..), SnapshotDB(..), SnapshotFormat(..), LTSVersion(..), NightlyVersion(..), GHCVersion(..), Snapshot(..))
+import StackYaml (parseStackYaml, fromStackageURL, findStackYamlFiles, findStackYamlFilesRecursive, getSymlinkMap)
 
 -- | Analyze a single stack.yaml file
 analyzeStackYaml :: SnapshotDB -> Map.Map FilePath FilePath -> FilePath -> IO (Maybe Action)
@@ -34,10 +34,15 @@ analyzeStackYaml db symlinkMap file = do
     -- No snapshot name found (e.g., no snapshot field, or a snapshot given
     -- as a nested @url:@ block): report it as unknown rather than skipping
     -- the file.  Unknown actions are never applied, so the span is irrelevant.
-    Nothing -> Just $ Action file "-" Unknown False (0, 0) symlinkTarget
-    Just (oldSnap, isResolver, span) -> do
+    Nothing -> Just $ Action file "-" Unknown False SnapshotName (0, 0) symlinkTarget
+    Just (value, isResolver, span) -> do
+      -- A URL into the stackage-snapshots repository is treated like
+      -- the snapshot name it refers to.
+      let (oldSnap, format) = case fromStackageURL value of
+            Just name -> (name , SnapshotURL)
+            Nothing   -> (value, SnapshotName)
       let newSnap = determineNewSnapshot db oldSnap
-      Just $ Action file oldSnap newSnap isResolver span symlinkTarget
+      Just $ Action file oldSnap newSnap isResolver format span symlinkTarget
 
 -- | Analyze specific stack*.yaml files, or all if empty list
 -- If recursive is True, search recursively in all subdirectories

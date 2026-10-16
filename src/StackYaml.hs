@@ -5,6 +5,8 @@ module StackYaml
   , findStackYamlFilesRecursive
   , parseStackYaml
   , findSnapshot
+  , fromStackageURL
+  , toStackageURL
   , applyAction
   , isStackYaml
   , getSymlinkMap
@@ -13,13 +15,14 @@ module StackYaml
 import Control.Monad (filterM, when)
 import Data.List (dropWhileEnd, isPrefixOf, isSuffixOf, sort)
 import Data.Map.Strict qualified as Map
+import Data.Char (isDigit)
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import System.Directory (listDirectory, doesFileExist, pathIsSymbolicLink, getSymbolicLinkTarget, doesDirectoryExist)
 import PathUtil ((</>), normalizeFilePath, collapseDots, takeDirectory, takeFileName, toForwardSlashes)
-import Types (Action(..), Bump(..))
+import Types (Action(..), Bump(..), SnapshotFormat(..))
 
 -- | Check if a filename is a stack*.yaml file
 isStackYaml :: FilePath -> Bool
@@ -97,6 +100,12 @@ parseStackYaml file = findSnapshot <$> TIO.readFile file
 --   at the beginning of a line.  Thus, commented-out fields like
 --   @# snapshot: lts-22.0@ and nested keys are ignored.
 --   A trailing comment is not part of the value.
+--
+--   If the field has no value on its line, the value of a @url:@ key
+--   in the indented block below it is returned instead, as in
+--
+--   > snapshot:
+--   >   url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/24/63.yaml
 findSnapshot :: Text -> Maybe (Text, Bool, (Int, Int))
 findSnapshot content =
   case findField "snapshot:" of
@@ -116,17 +125,47 @@ findSnapshot content =
         go [] _ = Nothing
         go l pos
           | field `isPrefixOf` l
-          , let afterField = drop (length field) l
-                trimmed = dropWhile isBlank afterField
-                value = stripComment $ takeWhile (`notElem` ("\n\r" :: String)) trimmed
-          , not (null value)
-          = let valueStart = pos + length field + (length afterField - length trimmed)
-            in  Just (value, valueStart, valueStart + length value)
-          | otherwise =
-              let (line, rest) = break (== '\n') l
-              in  case rest of
-                    []      -> Nothing
-                    _ : l'  -> go l' (pos + length line + 1)
+          = case valueAt (length field) l pos of
+              Just v  -> Just v
+              Nothing -> nextLine l pos nested
+          | otherwise = nextLine l pos go
+
+        -- Look for @url:@ in the indented block following the field.
+        -- Blank lines and comment lines do not end the block.
+        nested [] _ = Nothing
+        nested l pos
+          | isBlankOrComment line = nextLine l pos nested
+          | indented@(_ : _) <- takeWhile isBlank l
+          , let l' = drop (length indented) l
+                pos' = pos + length indented
+          = if "url:" `isPrefixOf` l'
+              then valueAt (length ("url:" :: String)) l' pos'
+              else nextLine l pos nested
+          | otherwise = Nothing
+          where
+            line = takeWhile (/= '\n') l
+            isBlankOrComment ln = case dropWhile isBlank ln of
+              []      -> True
+              '\r' : _ -> True
+              '#' : _ -> True
+              _       -> False
+
+    -- Continue with the next line.
+    nextLine l pos k =
+      let (line, rest) = break (== '\n') l
+      in  case rest of
+            []      -> Nothing
+            _ : l'  -> k l' (pos + length line + 1)
+
+    -- The value after the key of length @n@ at the beginning of @l@
+    -- (at offset @pos@), if not empty.
+    valueAt :: Int -> String -> Int -> Maybe (String, Int, Int)
+    valueAt n l pos =
+      let afterField = drop n l
+          trimmed = dropWhile isBlank afterField
+          value = stripComment $ takeWhile (`notElem` ("\n\r" :: String)) trimmed
+          valueStart = pos + n + (length afterField - length trimmed)
+      in  if null value then Nothing else Just (value, valueStart, valueStart + length value)
 
     isBlank :: Char -> Bool
     isBlank c = c == ' ' || c == '\t'
@@ -141,6 +180,51 @@ findSnapshot content =
         cut (c : cs) = c : cut cs
         cut [] = []
 
+-- | Prefix of URLs of snapshots in the stackage-snapshots repository.
+stackageURLPrefix :: Text
+stackageURLPrefix = "https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/"
+
+-- | Convert a URL into the stackage-snapshots repository to a snapshot name:
+--
+--   * @.../lts/24/63.yaml@ to @lts-24.63@,
+--   * @.../nightly/2026/1/5.yaml@ to @nightly-2026-01-05@.
+--
+--   Other URLs (and non-URLs) yield 'Nothing'.
+fromStackageURL :: Text -> Maybe Text
+fromStackageURL url = do
+  path <- T.stripSuffix ".yaml" =<< T.stripPrefix stackageURLPrefix url
+  case T.splitOn "/" path of
+    ["lts", major, minor] -> do
+      [ma, mi] <- mapM number [major, minor]
+      Just $ "lts-" <> showT ma <> "." <> showT mi
+    ["nightly", year, month, day] -> do
+      [y, m, d] <- mapM number [year, month, day]
+      Just $ "nightly-" <> showT y <> "-" <> pad2 m <> "-" <> pad2 d
+    _ -> Nothing
+  where
+    showT = T.pack . show
+    pad2 n = T.justifyRight 2 '0' (showT n)
+
+-- | Convert a snapshot name to a URL into the stackage-snapshots repository;
+--   inverse of 'fromStackageURL'.
+toStackageURL :: Text -> Maybe Text
+toStackageURL name = do
+  (kind, numbers) <- case () of
+    _ | Just v <- T.stripPrefix "lts-" name -> do
+          ns@[_, _] <- mapM number (T.splitOn "." v)
+          Just ("lts", ns)
+      | Just v <- T.stripPrefix "nightly-" name -> do
+          ns@[_, _, _] <- mapM number (T.splitOn "-" v)
+          Just ("nightly", ns)
+      | otherwise -> Nothing
+  Just $ stackageURLPrefix <> T.intercalate "/" (kind : map (T.pack . show) numbers) <> ".yaml"
+
+-- | Parse a non-negative decimal number.
+number :: Text -> Maybe Int
+number t
+  | not (T.null t), T.all isDigit t = Just (read (T.unpack t))
+  | otherwise = Nothing
+
 -- | Apply an action to update a stack.yaml file
 applyAction :: Bool -> Action -> IO ()
 applyAction verbose action = do
@@ -151,12 +235,19 @@ applyAction verbose action = do
       case actionBump action of
         UpToDate -> return ()
         Unknown -> return ()
-        BumpTo newSnap -> do
-          when verbose $ putStrLn $ "Updating " ++ actionFile action
-          content <- TIO.readFile (actionFile action)
-          let (before, after) = splitAtSpan (actionSpan action) content
-          let updated = before <> newSnap <> after
-          TIO.writeFile (actionFile action) updated
+        BumpTo newSnap ->
+          -- Write the new snapshot in the same format as the old one.
+          case render (actionFormat action) newSnap of
+            Nothing -> return ()
+            Just new -> do
+              when verbose $ putStrLn $ "Updating " ++ actionFile action
+              content <- TIO.readFile (actionFile action)
+              let (before, after) = splitAtSpan (actionSpan action) content
+              let updated = before <> new <> after
+              TIO.writeFile (actionFile action) updated
+  where
+    render SnapshotName = Just
+    render SnapshotURL  = toStackageURL
 
 -- | Split text at a character span
 splitAtSpan :: (Int, Int) -> Text -> (Text, Text)

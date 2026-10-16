@@ -1,0 +1,5 @@
+snapshot:
+  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2026/10/12.yaml  # pinned
+
+packages:
+- .

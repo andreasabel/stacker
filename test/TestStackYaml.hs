@@ -5,7 +5,7 @@ module TestStackYaml (stackYamlTests) where
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase, (@?=))
 
-import StackYaml (findSnapshot)
+import StackYaml (findSnapshot, fromStackageURL, toStackageURL)
 
 stackYamlTests :: [TestTree]
 stackYamlTests =
@@ -43,4 +43,35 @@ stackYamlTests =
   , testCase "CRLF line endings" $
       findSnapshot "# snapshot: x\r\nsnapshot: lts-24.5\r\n"
         @?= Just ("lts-24.5", False, (25, 33))
+  , testCase "nested url" $
+      findSnapshot "snapshot:\n  url: https://x/lts/24/63.yaml\n"
+        @?= Just ("https://x/lts/24/63.yaml", False, (17, 41))
+  , testCase "nested url after comments and blank lines" $
+      findSnapshot "snapshot:\n  # comment\n\n  url: u # c\npackages:\n"
+        @?= Just ("u", False, (30, 31))
+  , testCase "nested url with CRLF line endings" $
+      findSnapshot "snapshot:\r\n  url: u\r\n" @?= Just ("u", False, (18, 19))
+  , testCase "url outside of the snapshot block is ignored" $
+      findSnapshot "snapshot:\npackages:\n  url: u\n" @?= Nothing
+  , testCase "nested url under resolver" $
+      findSnapshot "resolver:\n  url: u\n" @?= Just ("u", True, (17, 18))
+  , testCase "LTS URL to name" $
+      fromStackageURL (prefix <> "lts/24/63.yaml") @?= Just "lts-24.63"
+  , testCase "nightly URL to name" $
+      fromStackageURL (prefix <> "nightly/2026/1/5.yaml") @?= Just "nightly-2026-01-05"
+  , testCase "URL from other repository is not recognized" $
+      fromStackageURL "https://example.com/lts/24/63.yaml" @?= Nothing
+  , testCase "URL from other branch is not recognized" $
+      fromStackageURL "https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/abc123/lts/24/63.yaml"
+        @?= Nothing
+  , testCase "malformed LTS URL is not recognized" $
+      fromStackageURL (prefix <> "lts/24/x.yaml") @?= Nothing
+  , testCase "LTS name to URL" $
+      toStackageURL "lts-24.63" @?= Just (prefix <> "lts/24/63.yaml")
+  , testCase "nightly name to URL" $
+      toStackageURL "nightly-2026-01-05" @?= Just (prefix <> "nightly/2026/1/5.yaml")
+  , testCase "other name has no URL" $
+      toStackageURL "ghc-9.10.3" @?= Nothing
   ]
+  where
+    prefix = "https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/"
