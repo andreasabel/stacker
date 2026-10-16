@@ -31,7 +31,10 @@ analyzeStackYaml db symlinkMap file = do
   let symlinkTarget = Map.lookup file symlinkMap
 
   parseStackYaml file <&> \case
-    Nothing -> Nothing
+    -- No snapshot name found (e.g., no snapshot field, or a snapshot given
+    -- as a nested @url:@ block): report it as unknown rather than skipping
+    -- the file.  Unknown actions are never applied, so the span is irrelevant.
+    Nothing -> Just $ Action file "-" Unknown False (0, 0) symlinkTarget
     Just (oldSnap, isResolver, span) -> do
       let newSnap = determineNewSnapshot db oldSnap
       Just $ Action file oldSnap newSnap isResolver span symlinkTarget

@@ -1,0 +1,6 @@
+# snapshot: lts-24.43
+snapshot:
+  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/24/63.yaml
+
+packages:
+- .
