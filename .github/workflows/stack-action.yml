@@ -37,7 +37,7 @@ jobs:
           cache-save-always: true
 
   macOS:
-    runs-on: macOS-latest
+    runs-on: macOS-15
     steps:
       - uses: actions/checkout@v7
       - uses: freckle/stack-action@v5
