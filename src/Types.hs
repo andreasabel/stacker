@@ -41,12 +41,20 @@ data Bump
   | Unknown       -- ^ Snapshot not recognized (e.g. not in the database)
   deriving (Eq, Show, Generic)
 
+-- | How the snapshot is written in a stack*.yaml file
+data SnapshotFormat
+  = SnapshotName  -- ^ As a name, e.g. @lts-24.63@
+  | SnapshotURL   -- ^ As a URL into the stackage-snapshots repository,
+                  --   e.g. @https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/24/63.yaml@
+  deriving (Eq, Show, Generic)
+
 -- | Action to take for a stack*.yaml file
 data Action = Action
   { actionFile :: FilePath
-  , actionOldSnapshot :: Text
+  , actionOldSnapshot :: Text  -- Snapshot name (also if given as URL)
   , actionBump :: Bump
   , actionIsResolver :: Bool  -- True if 'resolver' field, False if 'snapshot'
+  , actionFormat :: SnapshotFormat  -- How the snapshot is written in the file
   , actionSpan :: (Int, Int)  -- Character span to replace
   , actionSymlinkTarget :: Maybe FilePath  -- Just target if this is a symlink to another stack*.yaml in the list
   } deriving (Eq, Show, Generic)
