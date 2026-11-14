@@ -119,4 +119,4 @@ appName = "stacker"
 
 -- | Copyright information
 copyright :: String
-copyright = "Copyright (c) 2025 Andreas Abel"
+copyright = "Copyright (c) 2025-2026 Andreas Abel"

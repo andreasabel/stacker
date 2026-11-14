@@ -1,2 +1,2 @@
-resolver: nightly-2026-10-12
+resolver: nightly-2026-11-14
 compiler: ghc-9.14

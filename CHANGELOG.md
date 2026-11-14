@@ -1,3 +1,18 @@
+0.0.2.0
+=======
+
+* The recognition of snapshot/resolver versions in `stack*.yaml` files
+  is more robust now:
+  - commented-out snapshot/resolver fields are ignored
+  - snapshot urls are also recognized and updated
+  - when no snapshot/resolver is found in `stack*.yaml`, report "unknown snapshot"
+
+* Shipped snapshot database updated (latest: lts-24.66, nightly-2026-11-14).
+
+* Tested with GHC 9.4.8 - 9.14.1.
+
+_Andreas Abel, 2026-11-14_
+
 0.0.1.0
 =======
 
